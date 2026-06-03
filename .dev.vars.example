@@ -1,0 +1,4 @@
+# Used by `npm run preview` (opennextjs-cloudflare preview / wrangler).
+# Copy to .dev.vars and fill in. For production use `wrangler secret put`.
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_KEY
