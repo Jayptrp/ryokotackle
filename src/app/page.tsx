@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { ProductCard } from "@/components/product-card";
 import { getCategoryTree, getFeatured, getNewArrivals } from "@/lib/queries";
+import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: { absolute: SITE_TITLE },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+};
 
 export default async function HomePage() {
   const [categories, featured, newArrivals] = await Promise.all([
@@ -14,6 +22,13 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* SEO heading — the visual hero is image-led, so the page's single H1
+          carries the brand + primary keywords for crawlers and screen readers. */}
+      <h1 className="sr-only">
+        Ryoko Tackle — ร้านอุปกรณ์ตกปลา คันเบ็ด รอก เหยื่อปลอม สายเอ็น PE
+        และอุปกรณ์ตกปลาคุณภาพสูง
+      </h1>
+
       <HeroCarousel />
 
       {/* Categories */}

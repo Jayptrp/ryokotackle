@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
+import { COMPANY, SITE_NAME } from "@/lib/seo";
 
 const FOOTER_LINKS = [
   { href: "/privacy", label: "นโยบายความเป็นส่วนตัว" },
@@ -8,48 +9,100 @@ const FOOTER_LINKS = [
   { href: "/shipping", label: "การจัดส่ง" },
 ] as const;
 
+const SOCIAL = [
+  { href: "https://www.facebook.com/ryoko.tackle", label: "Facebook", icon: "thumb_up" },
+  { href: "https://www.tiktok.com/@ryoko.tackle", label: "TikTok", icon: "music_note" },
+  { href: "https://www.youtube.com/@ryoko.tackle", label: "YouTube", icon: "play_circle" },
+  { href: "https://www.instagram.com/ryoko.tackle", label: "Instagram", icon: "photo_camera" },
+] as const;
+
 export function SiteFooter() {
+  const { address } = COMPANY;
+  const year = new Date().getFullYear();
+
   return (
     <footer className="w-full border-t border-outline-variant bg-surface-container-lowest">
-      <Container className="flex flex-col items-start justify-between gap-base py-stack-lg md:flex-row md:items-center">
-        <div className="mb-stack-md md:mb-0">
+      <Container className="grid grid-cols-1 gap-stack-lg py-section-gap md:grid-cols-12">
+        {/* Brand + NAP */}
+        <div className="md:col-span-5">
           <span className="font-headline-sm text-headline-sm font-bold text-primary">
-            Ryoko
+            {SITE_NAME}
           </span>
           <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">
-            © 2024 Ryoko Tackle Thailand. Premium Japanese Craftsmanship.
+            {COMPANY.slogan}
           </p>
+          <address className="mt-stack-md not-italic font-body-sm text-body-sm leading-relaxed text-on-surface-variant">
+            {COMPANY.legalNameTh}
+            <br />
+            {address.street}, {address.locality}, {address.region} {address.postalCode}
+            <br />
+            โทร{" "}
+            <a href={`tel:${COMPANY.phone}`} className="hover:text-primary">
+              {COMPANY.phone}
+            </a>{" "}
+            ·{" "}
+            <a href={`tel:${COMPANY.mobile}`} className="hover:text-primary">
+              {COMPANY.mobile}
+            </a>
+            <br />
+            <a href={`mailto:${COMPANY.email}`} className="hover:text-primary">
+              {COMPANY.email}
+            </a>{" "}
+            · LINE {COMPANY.line}
+          </address>
         </div>
 
-        <nav className="flex flex-wrap gap-stack-lg">
+        {/* Quick links */}
+        <nav className="flex flex-col gap-stack-sm md:col-span-4">
+          <span className="font-label-caps text-label-caps text-on-surface-variant">
+            ลิงก์
+          </span>
+          <Link href="/products" className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary">
+            สินค้าทั้งหมด
+          </Link>
+          <Link href="/contact" className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary">
+            ติดต่อเรา
+          </Link>
           {FOOTER_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="font-label-caps text-label-caps text-on-surface-variant transition-colors hover:text-secondary"
+              className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary"
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <div className="mt-stack-md flex gap-stack-md md:mt-0">
-          <a
-            href="#"
-            aria-label="เว็บไซต์"
-            className="text-on-surface-variant transition-colors hover:text-primary"
-          >
-            <Icon name="public" />
-          </a>
-          <a
-            href="#"
-            aria-label="แชร์"
-            className="text-on-surface-variant transition-colors hover:text-primary"
-          >
-            <Icon name="share" />
-          </a>
+        {/* Social */}
+        <div className="flex flex-col gap-stack-sm md:col-span-3">
+          <span className="font-label-caps text-label-caps text-on-surface-variant">
+            ติดตามเรา
+          </span>
+          <div className="flex gap-stack-md">
+            {SOCIAL.map((s) => (
+              <a
+                key={s.href}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                className="text-on-surface-variant transition-colors hover:text-primary"
+              >
+                <Icon name={s.icon} />
+              </a>
+            ))}
+          </div>
         </div>
       </Container>
+
+      <div className="border-t border-outline-variant">
+        <Container className="py-stack-md">
+          <p className="font-body-sm text-body-sm text-on-surface-variant">
+            © {year} {COMPANY.legalName} — All Rights Reserved.
+          </p>
+        </Container>
+      </div>
     </footer>
   );
 }

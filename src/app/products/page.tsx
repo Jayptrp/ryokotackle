@@ -9,9 +9,12 @@ import {
   getCategoryTree,
   getProducts,
 } from "@/lib/queries";
+import { SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "สินค้าทั้งหมด — Ryoko Tackle",
+  title: "สินค้าทั้งหมด",
+  description: `เลือกซื้ออุปกรณ์ตกปลาครบวงจรจาก ${SITE_NAME} — คันเบ็ด รอก เหยื่อปลอม เหยื่อจิ๊ก สายเอ็น PE กล่องอุปกรณ์ และอะไหล่ ครบทุกแบรนด์ในที่เดียว`,
+  alternates: { canonical: "/products" },
 };
 
 export default async function ProductsPage({
