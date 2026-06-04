@@ -32,7 +32,7 @@ function mapListItem(row: any): ProductListItem {
     status: row.status,
     brand: row.brand ? { slug: row.brand.slug, name: row.brand.name } : null,
     category: row.category
-      ? { slug: row.category.slug, name: row.category.name }
+      ? { slug: row.category.slug, name: row.category.name, nameTh: row.category.name_th }
       : null,
     primaryImage: pickPrimaryImage(row.media ?? []),
   };
@@ -52,7 +52,7 @@ function mapCategory(row: any): Category {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const LIST_SELECT =
-  "id, slug, name, name_th, summary, status, brand:brands(slug, name), category:categories(slug, name), media:product_media(url, type, is_primary, sort_order)";
+  "id, slug, name, name_th, summary, status, brand:brands(slug, name), category:categories(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
 
 /* --------------------------------------------------------------- categories */
 

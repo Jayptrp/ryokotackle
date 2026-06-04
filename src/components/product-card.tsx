@@ -44,7 +44,7 @@ export function ProductCard({
         </h3>
         {product.category && (
           <p className="font-body-sm text-body-sm text-on-surface-variant">
-            {product.category.name}
+            {product.category.nameTh ?? product.category.name}
           </p>
         )}
       </div>

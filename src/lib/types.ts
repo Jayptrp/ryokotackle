@@ -48,7 +48,7 @@ export interface ProductListItem {
   summary: string | null;
   status: ProductStatus;
   brand: Pick<Brand, "slug" | "name"> | null;
-  category: Pick<Category, "slug" | "name"> | null;
+  category: Pick<Category, "slug" | "name" | "nameTh"> | null;
   primaryImage: string | null;
 }
 

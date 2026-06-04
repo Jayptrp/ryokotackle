@@ -68,7 +68,7 @@ export function ProductsFilters({
               )}
             >
               {c.icon && <Icon name={c.icon} className="text-base" />}
-              {c.name}
+              {c.nameTh ?? c.name}
             </button>
           ))}
         </div>
