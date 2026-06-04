@@ -3,18 +3,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
-import { ProductsFilters } from "@/components/products-filters";
-import { ProductCard } from "@/components/product-card";
-import { Pagination } from "@/components/pagination";
+import { ProductsBrowser } from "@/components/products-browser";
 import { JsonLd } from "@/components/json-ld";
 import {
-  DEFAULT_PAGE_SIZE,
+  getAllPublishedListItems,
   getBrands,
   getCategories,
   getCategoryBySlug,
-  getProducts,
 } from "@/lib/queries";
 import { SITE_NAME, absoluteUrl } from "@/lib/seo";
+
+// Prerender every category page; filtering happens client-side.
+export async function generateStaticParams() {
+  const categories = await getCategories();
+  return categories.map((c) => ({ slug: c.slug }));
+}
 
 export async function generateMetadata({
   params,
@@ -44,28 +47,27 @@ export async function generateMetadata({
 
 export default async function CategoryPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { slug } = await params;
-  const sp = await searchParams;
   const category = await getCategoryBySlug(slug);
   if (!category) notFound();
 
-  const page = Math.max(1, Number(sp.page) || 1);
-  const [brands, categories, { items, total }] = await Promise.all([
+  const [brands, categories, allProducts] = await Promise.all([
     getBrands(),
     getCategories(),
-    getProducts({
-      category: slug,
-      brand: sp.brand,
-      q: sp.q,
-      sort: sp.sort === "newest" ? "newest" : "name",
-      page,
-    }),
+    getAllPublishedListItems(),
   ]);
+
+  // This category plus its direct children (so a parent shows everything under it).
+  const slugs = new Set([
+    slug,
+    ...categories.filter((c) => c.parentSlug === slug).map((c) => c.slug),
+  ]);
+  const products = allProducts.filter(
+    (p) => p.category && slugs.has(p.category.slug),
+  );
 
   const parent = category.parentSlug
     ? categories.find((c) => c.slug === category.parentSlug)
@@ -128,35 +130,12 @@ export default async function CategoryPage({
         </div>
       </header>
 
-      <ProductsFilters
+      <ProductsBrowser
+        products={products}
         categories={categories}
         brands={brands}
+        lockCategory={slug}
         basePath={`/category/${slug}`}
-        lockCategory
-      />
-
-      <p className="mb-stack-md font-body-sm text-body-sm text-on-surface-variant">
-        พบ {total.toLocaleString("th-TH")} รายการ
-      </p>
-
-      {items.length > 0 ? (
-        <section className="grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-4">
-          {items.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </section>
-      ) : (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-low py-section-gap text-center font-body-md text-on-surface-variant">
-          ยังไม่มีสินค้าในหมวดนี้
-        </div>
-      )}
-
-      <Pagination
-        basePath={`/category/${slug}`}
-        searchParams={sp}
-        page={page}
-        pageSize={DEFAULT_PAGE_SIZE}
-        total={total}
       />
     </Container>
   );

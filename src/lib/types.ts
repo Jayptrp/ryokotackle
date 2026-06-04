@@ -50,6 +50,7 @@ export interface ProductListItem {
   brand: Pick<Brand, "slug" | "name"> | null;
   category: Pick<Category, "slug" | "name" | "nameTh"> | null;
   primaryImage: string | null;
+  createdAt: string;
 }
 
 /** Full product detail. */
