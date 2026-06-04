@@ -6,6 +6,7 @@ import { Icon } from "@/components/icon";
 import { ProductsFilters } from "@/components/products-filters";
 import { ProductCard } from "@/components/product-card";
 import { Pagination } from "@/components/pagination";
+import { JsonLd } from "@/components/json-ld";
 import {
   DEFAULT_PAGE_SIZE,
   getBrands,
@@ -13,6 +14,7 @@ import {
   getCategoryBySlug,
   getProducts,
 } from "@/lib/queries";
+import { SITE_NAME, absoluteUrl } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -21,10 +23,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const category = await getCategoryBySlug(slug);
+  if (!category) {
+    return { title: "ไม่พบหมวดหมู่", robots: { index: false, follow: false } };
+  }
+  const label = category.nameTh ?? category.name;
+  const description = `เลือกซื้อ${label} คุณภาพสูงจาก ${SITE_NAME} — รวมอุปกรณ์ตกปลาหลากหลายแบรนด์ พร้อมจัดส่งทั่วประเทศ`;
+  const canonical = `/category/${category.slug}`;
   return {
-    title: category
-      ? `${category.nameTh ?? category.name} — Ryoko Tackle`
-      : "หมวดหมู่ — Ryoko Tackle",
+    title: label,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: `${label} | ${SITE_NAME}`,
+      description,
+      url: absoluteUrl(canonical),
+    },
   };
 }
 
@@ -57,8 +71,26 @@ export default async function CategoryPage({
     ? categories.find((c) => c.slug === category.parentSlug)
     : null;
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { name: "สินค้าทั้งหมด", url: absoluteUrl("/products") },
+      ...(parent
+        ? [{ name: parent.nameTh ?? parent.name, url: absoluteUrl(`/category/${parent.slug}`) }]
+        : []),
+      { name: category.nameTh ?? category.name, url: absoluteUrl(`/category/${category.slug}`) },
+    ].map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+
   return (
     <Container className="py-stack-lg">
+      <JsonLd data={breadcrumbLd} />
       <div className="mb-stack-lg flex items-center gap-base opacity-60">
         <Link href="/products" className="font-label-caps text-label-caps">
           สินค้าทั้งหมด

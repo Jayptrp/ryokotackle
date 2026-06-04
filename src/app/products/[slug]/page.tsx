@@ -5,8 +5,16 @@ import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { ProductGallery } from "@/components/product-gallery";
 import { RichContent } from "@/components/rich-content";
+import { JsonLd } from "@/components/json-ld";
 import { CHANNEL_META } from "@/lib/channels";
 import { getProductBySlug, getPublishedSlugs } from "@/lib/queries";
+import { SITE_NAME, absoluteUrl } from "@/lib/seo";
+
+/** Strip HTML tags + clamp to a meta-description-friendly length. */
+function toMetaDescription(html: string, max = 160): string {
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
 
 // Pre-render published products; revalidate on demand when admins edit.
 export const dynamicParams = true;
@@ -23,11 +31,59 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
+
+  if (!product) {
+    return { title: "ไม่พบสินค้า", robots: { index: false, follow: false } };
+  }
+
+  // Title: "{Brand} {Name} | {Category}" — keyword-rich but concise.
+  // Most legacy product names already lead with the brand, so only prepend it
+  // when it isn't already present to avoid "RYOKO RYOKO …".
+  const brandName = product.brand?.name;
+  const nameHasBrand =
+    brandName &&
+    product.name.toLowerCase().startsWith(brandName.toLowerCase());
+  const titleParts = [
+    nameHasBrand ? "" : brandName,
+    product.name,
+    product.category ? `| ${product.category.nameTh ?? product.category.name}` : "",
+  ].filter(Boolean);
+  const title = titleParts.join(" ").trim();
+
+  // Description: prefer the brief summary, fall back to the rich detail, then
+  // a generated line that still carries the core keywords.
+  const description =
+    product.summary?.trim() ||
+    (product.description ? toMetaDescription(product.description) : "") ||
+    `${product.name}${product.brand ? ` โดย ${product.brand.name}` : ""} — ${
+      product.category?.nameTh ?? product.category?.name ?? "อุปกรณ์ตกปลา"
+    } คุณภาพสูงจาก ${SITE_NAME}`;
+
+  const primaryImage =
+    product.media.find((m) => m.type === "image" && m.isPrimary)?.url ??
+    product.media.find((m) => m.type === "image")?.url;
+  const canonical = `/products/${product.slug}`;
+
   return {
-    title: product
-      ? `${product.name} — Ryoko Tackle`
-      : "ไม่พบสินค้า — Ryoko Tackle",
-    description: product?.summary ?? undefined,
+    title,
+    description,
+    keywords: [product.name, product.brand?.name, product.category?.name, product.nameTh]
+      .filter(Boolean)
+      .join(", "),
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      url: absoluteUrl(canonical),
+      images: primaryImage ? [{ url: primaryImage, alt: product.name }] : undefined,
+    },
+    twitter: {
+      card: primaryImage ? "summary_large_image" : "summary",
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      images: primaryImage ? [primaryImage] : undefined,
+    },
   };
 }
 
@@ -42,8 +98,51 @@ export default async function ProductDetailPage({
 
   const { category, brand } = product;
 
+  const productImages = product.media
+    .filter((m) => m.type === "image")
+    .map((m) => m.url);
+  const canonical = absoluteUrl(`/products/${product.slug}`);
+
+  // Product structured data — helps rich results in search.
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    ...(product.nameTh && product.nameTh !== product.name
+      ? { alternateName: product.nameTh }
+      : {}),
+    ...(productImages.length ? { image: productImages } : {}),
+    ...(product.summary ? { description: product.summary } : {}),
+    ...(brand ? { brand: { "@type": "Brand", name: brand.name } } : {}),
+    ...(category
+      ? { category: category.nameTh ?? category.name }
+      : {}),
+    url: canonical,
+  };
+
+  // Breadcrumb trail (catalog → category → product).
+  const breadcrumbItems = [
+    { name: "สินค้าทั้งหมด", url: absoluteUrl("/products") },
+    ...(category
+      ? [{ name: category.nameTh ?? category.name, url: absoluteUrl(`/category/${category.slug}`) }]
+      : []),
+    { name: product.name, url: canonical },
+  ];
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbItems.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+
   return (
     <Container className="py-stack-lg md:py-section-gap">
+      <JsonLd data={productLd} />
+      <JsonLd data={breadcrumbLd} />
       {/* Breadcrumb */}
       <div className="mb-stack-lg flex flex-wrap items-center gap-base opacity-60">
         <Link href="/products" className="font-label-caps text-label-caps">
@@ -56,7 +155,7 @@ export default async function ProductDetailPage({
               href={`/category/${category.slug}`}
               className="font-label-caps text-label-caps"
             >
-              {category.name}
+              {category.nameTh ?? category.name}
             </Link>
           </>
         )}
@@ -86,7 +185,7 @@ export default async function ProductDetailPage({
                   href={`/category/${category.slug}`}
                   className="font-label-caps text-label-caps text-secondary"
                 >
-                  {category.name}
+                  {category.nameTh ?? category.name}
                 </Link>
               )}
             </div>

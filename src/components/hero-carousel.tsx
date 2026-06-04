@@ -63,9 +63,9 @@ export function HeroCarousel() {
           />
           <div className="absolute inset-0 flex items-end bg-gradient-to-t from-primary/60 to-transparent pb-stack-lg">
             <Container className="mb-stack-lg">
-              <h1 className="max-w-xl font-headline-lg text-headline-lg text-on-primary">
+              <h2 className="max-w-xl font-headline-lg text-headline-lg text-on-primary">
                 {slide.title}
-              </h1>
+              </h2>
               <p className="mt-stack-sm max-w-lg font-body-lg text-body-lg text-on-primary/80">
                 {slide.subtitle}
               </p>

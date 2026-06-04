@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { signOut } from "@/app/admin/auth/actions";
 import { Icon } from "@/components/icon";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,6 +19,17 @@ export default async function AdminLayout({
 }) {
   const supabase = await createAdminClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect("/admin/login");
+
+  // Verify admin_users membership
+  const { data: adminRow } = await supabase
+    .from("admin_users")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!adminRow) redirect("/admin/login?error=forbidden");
 
   return (
     <div className="flex min-h-screen bg-surface">

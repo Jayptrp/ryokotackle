@@ -42,6 +42,9 @@ yarn-error.log*
 # stitch design reference (local only)
 /.stitch-ref/
 
+# legacy SEO reference exports (local input docs)
+/legacy_SEO_*.txt
+
 # vercel
 .vercel
 
