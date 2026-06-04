@@ -1,39 +1,78 @@
-export type CategorySlug =
-  | "rods"
-  | "reels"
-  | "lures"
-  | "apparel"
-  | "accessories";
+import type { Database } from "@/lib/database.types";
+
+export type ProductStatus = Database["public"]["Enums"]["product_status"];
+export type MediaType = Database["public"]["Enums"]["media_type"];
+export type MediaProvider = Database["public"]["Enums"]["media_provider"];
+export type SalesChannel = Database["public"]["Enums"]["sales_channel"];
+
+export interface Brand {
+  id: string;
+  slug: string;
+  name: string;
+}
 
 export interface Category {
-  slug: CategorySlug;
-  /** Thai label shown in the UI, e.g. "คันเบ็ด (Rods)" */
-  label: string;
-  /** Material Symbols icon name */
-  icon: string;
+  id: string;
+  slug: string;
+  name: string;
+  nameTh: string | null;
+  parentSlug: string | null;
+  icon: string | null;
+  sortOrder: number;
+  children?: Category[];
 }
 
-export interface ProductSpec {
-  label: string;
-  value: string;
+export interface ProductMedia {
+  id: string;
+  type: MediaType;
+  provider: MediaProvider | null;
+  url: string;
+  alt: string | null;
+  sortOrder: number;
+  isPrimary: boolean;
 }
 
+export interface ProductChannel {
+  id: string;
+  channel: SalesChannel;
+  url: string;
+  sortOrder: number;
+}
+
+/** Lightweight shape used in listings / cards. */
+export interface ProductListItem {
+  id: string;
+  slug: string;
+  name: string;
+  nameTh: string | null;
+  summary: string | null;
+  status: ProductStatus;
+  brand: Pick<Brand, "slug" | "name"> | null;
+  category: Pick<Category, "slug" | "name"> | null;
+  primaryImage: string | null;
+}
+
+/** Full product detail. */
 export interface Product {
   id: string;
   slug: string;
   name: string;
-  tagline: string;
-  category: CategorySlug;
-  /** Short uppercase overline shown on cards, e.g. "NEW ARRIVAL" */
-  badge?: string;
-  price: number;
-  compareAtPrice?: number;
-  /** Primary image URL */
-  image: string;
-  /** Gallery images (defaults to [image] when absent) */
-  images?: string[];
-  /** Paragraphs of long-form description (Thai) */
-  description: string[];
-  specs: ProductSpec[];
-  videoTitle?: string;
+  nameTh: string | null;
+  summary: string | null;
+  description: string | null;
+  status: ProductStatus;
+  isFeatured: boolean;
+  brand: Brand | null;
+  category: Category | null;
+  media: ProductMedia[];
+  channels: ProductChannel[];
+}
+
+export interface ProductQuery {
+  category?: string;
+  brand?: string;
+  q?: string;
+  sort?: "name" | "newest";
+  page?: number;
+  pageSize?: number;
 }

@@ -3,6 +3,7 @@ import { IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { getCategoryTree } from "@/lib/queries";
 
 const ibmPlexSansThai = IBM_Plex_Sans_Thai({
   variable: "--font-ibm-plex-thai",
@@ -17,11 +18,13 @@ export const metadata: Metadata = {
     "Ryoko Tackle Thailand — อุปกรณ์ตกปลาระดับพรีเมียมจากญี่ปุ่น คันเบ็ด รอก เหยื่อปลอม และอุปกรณ์เสริมคุณภาพสูง",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const categories = await getCategoryTree();
+
   return (
     <html lang="th" className={`${ibmPlexSansThai.variable} h-full`}>
       <head>
@@ -31,7 +34,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-on-background selection:bg-secondary-container">
-        <SiteHeader />
+        <SiteHeader categories={categories} />
         <main className="flex-1">{children}</main>
         <SiteFooter />
       </body>

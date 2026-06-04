@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "@/lib/database.types";
 
 /**
  * Supabase publishable key (new `sb_publishable_...` format). Falls back to the
@@ -12,7 +13,7 @@ export const SUPABASE_PUBLISHABLE_KEY =
 
 /** Supabase client for use in Client Components (browser). */
 export function createClient() {
-  return createBrowserClient(
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     SUPABASE_PUBLISHABLE_KEY,
   );
