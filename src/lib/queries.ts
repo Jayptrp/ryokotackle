@@ -35,6 +35,7 @@ function mapListItem(row: any): ProductListItem {
       ? { slug: row.category.slug, name: row.category.name, nameTh: row.category.name_th }
       : null,
     primaryImage: pickPrimaryImage(row.media ?? []),
+    createdAt: row.created_at,
   };
 }
 
@@ -52,7 +53,7 @@ function mapCategory(row: any): Category {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const LIST_SELECT =
-  "id, slug, name, name_th, summary, status, brand:brands(slug, name), category:categories(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
+  "id, slug, name, name_th, summary, status, created_at, brand:brands(slug, name), category:categories(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
 
 /* --------------------------------------------------------------- categories */
 
@@ -158,6 +159,22 @@ export async function getProducts(
 
   const { data, count } = await builder.range(from, from + pageSize - 1);
   return { items: (data ?? []).map(mapListItem), total: count ?? 0 };
+}
+
+/**
+ * All published products in one query (no pagination). Intended for pages that
+ * filter client-side — the catalog is small (~360 items), so loading once and
+ * filtering in the browser is cheaper than re-rendering on every filter click.
+ */
+export async function getAllPublishedListItems(): Promise<ProductListItem[]> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("products")
+    .select(LIST_SELECT)
+    .eq("status", "published")
+    .order("name", { ascending: true })
+    .limit(1000);
+  return (data ?? []).map(mapListItem);
 }
 
 export async function getFeatured(limit = 8): Promise<ProductListItem[]> {
