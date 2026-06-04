@@ -6,6 +6,14 @@ shadcn (Base UI variant). Read it before non-trivial work. Key reminders: it's a
 (don't add commerce); data layer is `src/lib/queries.ts` (cookieless public Supabase
 client); schema in `supabase/migrations/`; Supabase uses the new `sb_publishable_` key.
 
+**Hard constraints (breaking these breaks the Cloudflare deploy — details in CONTEXT.md):**
+- **No `middleware.ts` / `proxy.ts`** — incompatible with OpenNext; admin auth is in the
+  admin layout server component.
+- **Keep public routes static** — no per-request SSR for `/products` & `/category`
+  (browsing filters run client-side); reintroducing it risks Worker Error 1102.
+- **Deploy via GitHub Actions**, not local `npm run deploy` (fails on Windows).
+- Display Thai category/product names with `nameTh ?? name`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
