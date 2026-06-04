@@ -75,7 +75,16 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-primary"
                   >
                     <Icon name={c.icon ?? "category"} className="text-xl" />
-                    <span className="font-body-sm text-body-sm">{c.name}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-body-sm text-body-sm font-medium">
+                        {c.nameTh ?? c.name}
+                      </span>
+                      {c.nameTh && c.nameTh !== c.name && (
+                        <span className="text-xs opacity-75">
+                          {c.name}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 ))}
               </div>

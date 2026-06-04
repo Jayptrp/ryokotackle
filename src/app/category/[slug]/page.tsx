@@ -23,7 +23,7 @@ export async function generateMetadata({
   const category = await getCategoryBySlug(slug);
   return {
     title: category
-      ? `${category.name} — Ryoko Tackle`
+      ? `${category.nameTh ?? category.name} — Ryoko Tackle`
       : "หมวดหมู่ — Ryoko Tackle",
   };
 }
@@ -70,12 +70,12 @@ export default async function CategoryPage({
               href={`/category/${parent.slug}`}
               className="font-label-caps text-label-caps"
             >
-              {parent.name}
+              {parent.nameTh ?? parent.name}
             </Link>
           </>
         )}
         <Icon name="chevron_right" className="text-[14px]" />
-        <span className="font-label-caps text-label-caps">{category.name}</span>
+        <span className="font-label-caps text-label-caps">{category.nameTh ?? category.name}</span>
       </div>
 
       <header className="mb-stack-lg flex items-center gap-3">
@@ -86,11 +86,11 @@ export default async function CategoryPage({
         )}
         <div>
           <h1 className="font-headline-lg text-headline-lg text-primary">
-            {category.name}
+            {category.nameTh ?? category.name}
           </h1>
           {category.nameTh && category.nameTh !== category.name && (
             <p className="font-body-sm text-body-sm text-on-surface-variant">
-              {category.nameTh}
+              {category.name}
             </p>
           )}
         </div>

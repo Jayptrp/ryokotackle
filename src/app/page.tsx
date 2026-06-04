@@ -40,9 +40,16 @@ export default async function HomePage() {
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-primary transition-colors group-hover:bg-secondary-container group-hover:text-on-secondary-container">
                   <Icon name={category.icon ?? "category"} className="text-2xl" />
                 </span>
-                <span className="font-label-caps text-label-caps">
-                  {category.name}
-                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-label-caps text-label-caps font-medium">
+                    {category.nameTh ?? category.name}
+                  </span>
+                  {category.nameTh && category.nameTh !== category.name && (
+                    <span className="text-xs text-on-surface-variant">
+                      {category.name}
+                    </span>
+                  )}
+                </div>
               </Link>
             ))}
           </div>
