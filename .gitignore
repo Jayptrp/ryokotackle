@@ -52,5 +52,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# legacy site archive (large; local only)
+# legacy site archive + generated import artifacts (local only)
 /scrape-output/
+/scripts/out/
+/scrape.log
+/scrape-diag.txt
