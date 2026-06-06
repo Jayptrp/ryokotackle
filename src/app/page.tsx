@@ -29,7 +29,9 @@ export default async function HomePage() {
         และอุปกรณ์ตกปลาคุณภาพสูง
       </h1>
 
-      <HeroCarousel />
+      <Container className="pt-stack-md">
+        <HeroCarousel />
+      </Container>
 
       {/* Categories */}
       <section className="py-section-gap">

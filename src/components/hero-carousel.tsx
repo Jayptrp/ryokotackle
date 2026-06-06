@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 
 interface Slide {
@@ -44,7 +43,7 @@ export function HeroCarousel() {
   }, []);
 
   return (
-    <section className="group relative h-[85vh] w-full overflow-hidden bg-primary-container">
+    <section className="group relative h-[clamp(320px,55vh,520px)] w-full overflow-hidden rounded-2xl bg-primary-container">
       {SLIDES.map((slide, i) => (
         <div
           key={slide.title}
@@ -62,14 +61,14 @@ export function HeroCarousel() {
             unoptimized
           />
           <div className="absolute inset-0 flex items-end bg-gradient-to-t from-primary/60 to-transparent pb-stack-lg">
-            <Container className="mb-stack-lg">
+            <div className="mb-stack-lg w-full px-6 md:px-10">
               <h2 className="max-w-xl font-headline-lg text-headline-lg text-on-primary">
                 {slide.title}
               </h2>
               <p className="mt-stack-sm max-w-lg font-body-lg text-body-lg text-on-primary/80">
                 {slide.subtitle}
               </p>
-            </Container>
+            </div>
           </div>
         </div>
       ))}

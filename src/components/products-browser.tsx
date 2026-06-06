@@ -65,6 +65,28 @@ export function ProductsBrowser({
     [categories],
   );
 
+  // Products in the active category only (ignoring brand/search) — used to
+  // derive which brands are actually available to filter by.
+  const categoryProducts = useMemo(() => {
+    if (lockCategory) {
+      const set = descendantSlugs(lockCategory);
+      return products.filter((p) => p.category && set.has(p.category.slug));
+    }
+    if (!category || category === "all") return products;
+    const set = descendantSlugs(category);
+    return products.filter((p) => p.category && set.has(p.category.slug));
+  }, [products, category, lockCategory, descendantSlugs]);
+
+  const availableBrands = useMemo(() => {
+    const slugs = new Set(categoryProducts.map((p) => p.brand?.slug).filter(Boolean));
+    return brands.filter((b) => slugs.has(b.slug));
+  }, [categoryProducts, brands]);
+
+  // Drop the brand filter if it isn't available in the chosen category.
+  useEffect(() => {
+    if (brand && !availableBrands.some((b) => b.slug === brand)) setBrand("");
+  }, [availableBrands, brand]);
+
   const filtered = useMemo(() => {
     let list = products;
     if (!lockCategory && category && category !== "all") {
@@ -104,8 +126,9 @@ export function ProductsBrowser({
   }, [ready, category, brand, q, sort, page, lockCategory, basePath]);
 
   // Filter changes reset to page 1 (page changes themselves must not).
+  // Clicking the active category again clears it back to "all".
   const pickCategory = (v: string) => {
-    setCategory(v);
+    setCategory((cur) => (cur === v ? "all" : v));
     setPage(1);
   };
   const pickBrand = (v: string) => {
@@ -134,32 +157,21 @@ export function ProductsBrowser({
       <div className="mb-stack-lg flex flex-col gap-stack-md">
         {!lockCategory && (
           <div className="flex flex-wrap items-center gap-stack-sm overflow-x-auto pb-2 no-scrollbar md:gap-stack-md">
-            <button
-              type="button"
-              onClick={() => pickCategory("all")}
-              className={cn(
-                "whitespace-nowrap rounded-full border px-6 py-2 font-label-caps text-label-caps transition-all",
-                category === "all"
-                  ? "border-primary bg-primary text-on-primary"
-                  : "border-outline-variant bg-surface-container-lowest hover:border-primary",
-              )}
-            >
-              ทั้งหมด
-            </button>
-            {topCategories.map((c) => (
+            {/* Uniform chips: identical font/size, only the colour changes. */}
+            {[{ slug: "all", label: "ทั้งหมด" },
+              ...topCategories.map((c) => ({ slug: c.slug, label: c.nameTh ?? c.name }))].map((c) => (
               <button
                 key={c.slug}
                 type="button"
                 onClick={() => pickCategory(c.slug)}
                 className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap rounded-full border px-6 py-2 font-label-caps text-label-caps transition-all",
+                  "whitespace-nowrap rounded-full border px-5 py-2 font-label-caps text-label-caps transition-colors",
                   category === c.slug
                     ? "border-primary bg-primary text-on-primary"
-                    : "border-outline-variant bg-surface-container-lowest hover:border-primary",
+                    : "border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-primary",
                 )}
               >
-                {c.icon && <Icon name={c.icon} className="text-base" />}
-                {c.nameTh ?? c.name}
+                {c.label}
               </button>
             ))}
           </div>
@@ -173,7 +185,7 @@ export function ProductsBrowser({
               className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
             >
               <option value="">ทุกแบรนด์ (All brands)</option>
-              {brands.map((b) => (
+              {availableBrands.map((b) => (
                 <option key={b.slug} value={b.slug}>
                   {b.name}
                 </option>
