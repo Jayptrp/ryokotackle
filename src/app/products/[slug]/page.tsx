@@ -140,11 +140,11 @@ export default async function ProductDetailPage({
   };
 
   return (
-    <Container className="py-stack-lg md:py-section-gap">
+    <Container className="pb-section-gap pt-stack-md">
       <JsonLd data={productLd} />
       <JsonLd data={breadcrumbLd} />
       {/* Breadcrumb */}
-      <div className="mb-stack-lg flex flex-wrap items-center gap-base opacity-60">
+      <div className="mb-stack-md flex flex-wrap items-center gap-base opacity-60">
         <Link href="/products" className="font-label-caps text-label-caps">
           สินค้าทั้งหมด
         </Link>
