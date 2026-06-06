@@ -21,15 +21,11 @@ const SOCIALS = [
   { icon: "play_circle", label: "YouTube", href: "https://www.youtube.com/@ryoko.tackle" },
 ] as const;
 
-// Exact store coordinates (geocoded — the shop is pinned on the map providers).
-// Google blocks no-key iframe embeds, so we default to an OpenStreetMap embed;
-// set NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY to render the Google Maps Embed API.
+// Exact store coordinates (geocoded). Interactive OpenStreetMap embed + an
+// "open in Google Maps" link.
 const LAT = 13.6812373;
 const LNG = 100.7127972;
-const GMAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY;
-const MAP_EMBED = GMAPS_KEY
-  ? `https://www.google.com/maps/embed/v1/place?key=${GMAPS_KEY}&q=${LAT},${LNG}&zoom=16`
-  : `https://www.openstreetmap.org/export/embed.html?bbox=${LNG - 0.005}%2C${LAT - 0.0035}%2C${LNG + 0.005}%2C${LAT + 0.0035}&layer=mapnik&marker=${LAT}%2C${LNG}`;
+const MAP_EMBED = `https://www.openstreetmap.org/export/embed.html?bbox=${LNG - 0.005}%2C${LAT - 0.0035}%2C${LNG + 0.005}%2C${LAT + 0.0035}&layer=mapnik&marker=${LAT}%2C${LNG}`;
 const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${LAT},${LNG}`;
 
 export default function ContactPage() {
