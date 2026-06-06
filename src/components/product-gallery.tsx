@@ -71,7 +71,7 @@ export function ProductGallery({
       type="button"
       onClick={() => pick(f)}
       className={cn(
-        "rounded-md px-3 py-1.5 font-label-caps text-label-caps transition-colors",
+        "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
         filter === f
           ? "bg-primary text-on-primary"
           : "text-on-surface-variant hover:bg-surface-container-high",

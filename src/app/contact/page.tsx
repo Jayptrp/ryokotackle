@@ -1,21 +1,32 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
+import { COMPANY } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "ติดต่อเรา — Ryoko Tackle",
 };
 
 const INFO_CARDS = [
-  { icon: "phone", label: "โทรศัพท์", value: "+66 (0) 2 123 4567" },
-  { icon: "mail", label: "อีเมล", value: "support@ryokotackle.com" },
+  { icon: "phone", label: "โทรศัพท์", value: COMPANY.phone },
+  { icon: "smartphone", label: "มือถือ", value: COMPANY.mobile },
+  { icon: "mail", label: "อีเมล", value: COMPANY.email },
+  { icon: "chat", label: "LINE", value: COMPANY.line },
 ] as const;
 
 const SOCIALS = [
-  { icon: "public", label: "เว็บไซต์" },
-  { icon: "chat_bubble", label: "LINE" },
-  { icon: "photo_camera", label: "Instagram" },
+  { icon: "thumb_up", label: "Facebook", href: "https://www.facebook.com/ryoko.tackle" },
+  { icon: "music_note", label: "TikTok", href: "https://www.tiktok.com/@ryoko.tackle" },
+  { icon: "photo_camera", label: "Instagram", href: "https://www.instagram.com/ryoko.tackle" },
+  { icon: "play_circle", label: "YouTube", href: "https://www.youtube.com/@ryoko.tackle" },
 ] as const;
+
+// Exact store coordinates (geocoded). Interactive OpenStreetMap embed + an
+// "open in Google Maps" link.
+const LAT = 13.6812373;
+const LNG = 100.7127972;
+const MAP_EMBED = `https://www.openstreetmap.org/export/embed.html?bbox=${LNG - 0.005}%2C${LAT - 0.0035}%2C${LNG + 0.005}%2C${LAT + 0.0035}&layer=mapnik&marker=${LAT}%2C${LNG}`;
+const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${LAT},${LNG}`;
 
 export default function ContactPage() {
   return (
@@ -124,12 +135,14 @@ export default function ContactPage() {
                 <div className="space-y-stack-md">
                   <h3 className="flex items-center gap-2 font-headline-sm text-headline-sm text-primary">
                     <Icon name="location_on" className="text-secondary" />
-                    Ryoko Thailand Showroom
+                    ที่ตั้งบริษัทและหน้าร้าน
                   </h3>
                   <p className="pl-8 font-body-md text-body-md leading-relaxed text-on-surface-variant">
-                    99/9 หมู่บ้านพรีเมียมอาคารเอ ชั้น 1 ถนนรัชดาภิเษก
+                    {COMPANY.legalNameTh}
                     <br />
-                    แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900
+                    289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1
+                    <br />
+                    ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540
                   </p>
                 </div>
 
@@ -141,7 +154,9 @@ export default function ContactPage() {
                     {SOCIALS.map((social) => (
                       <a
                         key={social.label}
-                        href="#"
+                        href={social.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         aria-label={social.label}
                         className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant text-on-surface-variant transition-all duration-300 hover:bg-primary hover:text-white"
                       >
@@ -156,31 +171,49 @@ export default function ContactPage() {
         </Container>
       </section>
 
-      {/* Map placeholder */}
-      <section className="mt-section-gap">
-        <div className="relative h-[500px] w-full overflow-hidden bg-surface-container-low">
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-container to-surface-container-high">
-            <div className="pointer-events-auto max-w-sm rounded-xl border border-outline-variant bg-white/90 p-stack-lg shadow-xl backdrop-blur-sm">
-              <span className="mb-2 block font-label-caps text-label-caps text-secondary">
+      {/* Location + live map */}
+      <section className="py-section-gap">
+        <Container>
+          <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-outline-variant shadow-sm lg:grid-cols-2">
+            {/* Info box */}
+            <div className="flex flex-col justify-center gap-stack-md bg-gradient-to-br from-white to-surface-container-low p-stack-lg">
+              <span className="block font-label-caps text-label-caps text-secondary">
                 OUR LOCATION
               </span>
-              <h4 className="mb-2 font-headline-sm text-headline-sm text-primary">
-                Visit Our Showroom
+              <h4 className="font-headline-md text-headline-md text-primary">
+                Visit Our Company &amp; Store
               </h4>
-              <p className="mb-4 font-body-sm text-body-sm text-on-surface-variant">
-                สัมผัสประสบการณ์อุปกรณ์ตกปลาระดับพรีเมียมด้วยตัวคุณเอง
+              <p className="font-body-md text-body-md text-on-surface-variant">
+                แวะมาพูดคุยกับทีมงานและลองจับอุปกรณ์ตกปลาด้วยตัวคุณเองที่ร้านของเรา
+              </p>
+              <p className="font-body-sm text-body-sm leading-relaxed text-on-surface-variant">
+                {COMPANY.legalNameTh}
+                <br />
+                289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1 ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540
               </p>
               <a
-                href="https://maps.google.com"
+                href={MAP_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 font-label-caps text-label-caps text-secondary transition-all duration-300 hover:gap-4"
+                className="flex w-fit items-center gap-2 font-label-caps text-label-caps text-secondary transition-all duration-300 hover:gap-4"
               >
                 เปิดใน Google Maps <Icon name="arrow_forward" />
               </a>
             </div>
+
+            {/* Live Google map */}
+            <div className="min-h-[360px]">
+              <iframe
+                src={MAP_EMBED}
+                title="แผนที่ร้าน Ryoko Tackle"
+                className="h-full min-h-[360px] w-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
           </div>
-        </div>
+        </Container>
       </section>
     </>
   );

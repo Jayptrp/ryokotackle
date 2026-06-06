@@ -29,7 +29,7 @@ export default async function ProductsPage() {
         <h1 className="mb-stack-sm font-headline-lg text-headline-lg text-primary">
           สินค้าทั้งหมด
         </h1>
-        <p className="max-w-2xl font-body-md text-body-md text-on-surface-variant">
+        <p className="font-body-md text-body-md text-on-surface-variant md:whitespace-nowrap">
           แคตตาล็อกอุปกรณ์ตกปลา Ryoko และแบรนด์ในเครือ — คันเบ็ด รอก เหยื่อปลอม
           สายเอ็น และอุปกรณ์เสริมคุณภาพสูง
         </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -34,14 +35,20 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant bg-surface">
-      <Container className="flex h-20 items-center justify-between">
+      <Container className="flex h-16 items-center justify-between md:h-20">
         <Link
           href="/"
           className="flex items-center gap-2 font-headline-md text-headline-md font-bold tracking-tight text-primary"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-container-highest">
-            <Icon name="water_drop" className="text-primary/60 text-2xl" />
-          </span>
+          <Image
+            src="/ryoko-logo.png"
+            alt="Ryoko Tackle"
+            width={40}
+            height={40}
+            className="h-9 w-9 md:h-10 md:w-10"
+            priority
+            unoptimized
+          />
           Ryoko
         </Link>
 

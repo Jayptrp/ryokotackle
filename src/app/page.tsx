@@ -29,7 +29,9 @@ export default async function HomePage() {
         และอุปกรณ์ตกปลาคุณภาพสูง
       </h1>
 
-      <HeroCarousel />
+      <Container className="pt-stack-md">
+        <HeroCarousel />
+      </Container>
 
       {/* Categories */}
       <section className="py-section-gap">
@@ -50,9 +52,9 @@ export default async function HomePage() {
               <Link
                 key={category.slug}
                 href={`/category/${category.slug}`}
-                className="group flex flex-col items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-stack-md text-center transition-all hover:border-secondary hover:shadow-sm"
+                className="group flex flex-col items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-stack-md text-center transition-all hover:border-secondary hover:shadow-sm active:scale-[0.97] active:border-primary active:bg-secondary-container/40"
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-primary transition-colors group-hover:bg-secondary-container group-hover:text-on-secondary-container">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-primary transition-colors group-hover:bg-secondary-container group-hover:text-on-secondary-container group-active:bg-secondary-container group-active:text-on-secondary-container">
                   <Icon name={category.icon ?? "category"} className="text-2xl" />
                 </span>
                 <div className="flex flex-col gap-0.5">
