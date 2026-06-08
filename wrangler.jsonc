@@ -10,7 +10,23 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  // Incremental cache store: prerendered pages are read from KV instead of
+  // being re-rendered per request (see open-next.config.ts).
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "646207cab3de4fd7bcba4064defabdb1"
+    }
+  ],
+  // Tag cache: lets the admin panel's revalidatePath(...) invalidate KV entries.
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "ryokotackle-tag-cache",
+      "database_id": "7882af6f-1025-440c-ba77-2ffd06af4eb5"
+    }
+  ]
   // Bind Supabase keys as Worker secrets for production:
   //   npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL
   //   npx wrangler secret put NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
