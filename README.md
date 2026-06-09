@@ -8,7 +8,8 @@ Storefront for **Ryoko Tackle Thailand** — premium Japanese fishing tackle (�
 - **Tailwind CSS v4** with Material Design 3 design tokens (see `src/app/globals.css`)
 - **shadcn/ui** (Base UI variant) for primitives
 - **Supabase** (`@supabase/ssr`) for data
-- **Cloudflare Workers** via **OpenNext** (`@opennextjs/cloudflare`)
+- **Cloudflare Workers** via **OpenNext** (`@opennextjs/cloudflare`), with
+  **Workers KV** as the incremental (page) cache and **D1** as the tag cache
 - Type face: **IBM Plex Sans Thai**; icons: **Material Symbols Outlined**
 
 ## Getting started
@@ -58,20 +59,47 @@ server-side access use a `sb_secret_…` key (never prefixed with `NEXT_PUBLIC_`
 
 ## Deploying to Cloudflare
 
+**Deploy via GitHub Actions, not locally.** `.github/workflows/deploy.yml` runs
+`npm run deploy` on every push to `main` (and via manual `workflow_dispatch`).
+Local `npm run deploy` fails on Windows — OpenNext creates symlinks during
+bundling that Windows blocks — so use the Action (or WSL).
+
 ```bash
 npm run preview   # build with OpenNext + run locally on the Workers runtime
-npm run deploy    # build + deploy to Cloudflare
+npm run deploy    # build + deploy (CI / Linux / WSL only — see above)
 ```
 
-Configuration lives in `wrangler.jsonc` and `open-next.config.ts`. Provide
-secrets for production with:
+Configuration lives in `wrangler.jsonc` and `open-next.config.ts`. For
+`npm run preview`, copy `.dev.vars.example` to `.dev.vars`. Production secrets
+(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) are set as
+GitHub Action secrets — they're needed at **build** time because Next.js embeds
+`NEXT_PUBLIC_*` vars into the bundle.
 
-```bash
-npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL
-npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY
-```
+### Caching (important for CPU limits)
 
-For `npm run preview`, copy `.dev.vars.example` to `.dev.vars` instead.
+Public routes are static/SSG, but on OpenNext + Cloudflare a "static" page is
+still served by the Worker — and **without an incremental cache it gets
+re-rendered on every request** (including Next.js RSC prefetches), which spikes
+CPU and trips Cloudflare's per-request limit (`Error 1102`). To fix this,
+`open-next.config.ts` wires up:
+
+- **`incrementalCache: kvIncrementalCache`** — prerendered pages are read from
+  Workers KV instead of re-rendered. Binding: **`NEXT_INC_CACHE_KV`**.
+- **`tagCache: d1NextTagCache`** — lets the admin panel's on-demand
+  `revalidatePath(...)` invalidate cached pages. Binding: **`NEXT_TAG_CACHE_D1`**.
+- No `queue` is configured — it's only needed for time-based ISR, and this app
+  uses on-demand revalidation only (keeps us off Durable Objects / the paid plan).
+
+Both bindings are declared in `wrangler.jsonc`. The `opennextjs-cloudflare deploy`
+step **auto-creates the D1 `revalidations` table and populates KV** — no manual
+migration. The deploy's Cloudflare API token therefore needs **Workers + KV +
+D1 (Edit)** permissions.
+
+> **Free-tier note:** Workers KV allows **1,000 writes/day** (resets 00:00 UTC =
+> 07:00 ICT). A full deploy re-populates the cache (~750 writes under a fresh
+> build ID), so on the free plan you can effectively deploy ~once/day. Admin
+> *content* edits are cheap (only the changed pages are re-written) and are not
+> affected. Workers Paid removes these limits.
 
 ## Design reference
 
