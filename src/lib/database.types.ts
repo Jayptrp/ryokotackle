@@ -29,6 +29,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pages: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          slug: string
+          status: Database["public"]["Enums"]["product_status"]
+          title: string
+          title_th: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          slug: string
+          status?: Database["public"]["Enums"]["product_status"]
+          title: string
+          title_th?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          slug?: string
+          status?: Database["public"]["Enums"]["product_status"]
+          title?: string
+          title_th?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           created_at: string

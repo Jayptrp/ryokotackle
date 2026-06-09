@@ -276,3 +276,24 @@ export async function getPublishedSlugs(): Promise<string[]> {
     .eq("status", "published");
   return (data ?? []).map((r) => r.slug);
 }
+
+/* ----------------------------------------------------------------- pages */
+
+export interface PageContent {
+  title: string;
+  titleTh: string | null;
+  content: string | null;
+}
+
+/** A published static page (About, etc.) by slug, or null if missing/unpublished. */
+export async function getPageBySlug(slug: string): Promise<PageContent | null> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("pages")
+    .select("title, title_th, content")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (!data) return null;
+  return { title: data.title, titleTh: data.title_th, content: data.content };
+}

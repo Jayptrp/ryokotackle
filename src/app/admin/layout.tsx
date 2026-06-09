@@ -10,6 +10,7 @@ export const metadata: Metadata = { title: "Admin — Ryoko Tackle" };
 const NAV = [
   { href: "/admin", label: "สินค้าทั้งหมด", icon: "inventory_2", exact: true },
   { href: "/admin/products/new", label: "เพิ่มสินค้าใหม่", icon: "add_circle" },
+  { href: "/admin/pages/about", label: "แก้ไขหน้าเกี่ยวกับเรา", icon: "description" },
 ] as const;
 
 export default async function AdminLayout({
