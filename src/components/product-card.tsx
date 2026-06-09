@@ -16,13 +16,13 @@ export function ProductCard({
       href={`/products/${product.slug}`}
       className={cn("group block cursor-pointer", className)}
     >
-      <div className="mb-stack-md aspect-[4/5] overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low transition-all duration-500">
+      <div className="mb-stack-md aspect-square overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low transition-all duration-500">
         {product.primaryImage ? (
           <Image
             src={product.primaryImage}
             alt={product.name}
             width={600}
-            height={750}
+            height={600}
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
             unoptimized
           />
