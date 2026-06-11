@@ -37,7 +37,7 @@ export function ProductCard({
       </div>
       <div className="flex flex-col gap-1">
         <span className="font-label-caps text-label-caps text-secondary">
-          {product.brand?.name ?? product.category?.name ?? "RYOKO"}
+          {product.category?.name ?? "RYOKO"}
         </span>
         <h3 className="font-headline-sm text-headline-sm text-on-surface transition-colors group-hover:text-primary">
           {product.name}

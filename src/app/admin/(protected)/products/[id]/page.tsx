@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getBrands, getCategories } from "@/lib/queries";
+import { getCategories } from "@/lib/queries";
 import { saveProduct } from "@/app/admin/products/actions";
+import { CategorySelect } from "@/components/admin/category-select";
 import { MediaManager } from "@/components/admin/media-manager";
 import { ChannelManager } from "@/components/admin/channel-manager";
 import { DescriptionForm } from "@/components/admin/description-form";
@@ -21,13 +22,13 @@ export default async function ProductEditorPage({
   const isNew = id === "new";
 
   const supabase = await createAdminClient();
-  const [brands, categories] = await Promise.all([getBrands(), getCategories()]);
+  const categories = await getCategories();
 
   // Fetch existing product if editing
   let product: {
     id: string; slug: string; name: string; name_th: string | null;
     summary: string | null; description: string | null;
-    brand_id: string | null; category_id: string | null;
+    category_id: string | null;
     status: string; is_featured: boolean;
     media: ProductMedia[]; channels: ProductChannel[];
   } | null = null;
@@ -36,7 +37,7 @@ export default async function ProductEditorPage({
     const { data } = await supabase
       .from("products")
       .select(
-        "id, slug, name, name_th, summary, description, brand_id, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
+        "id, slug, name, name_th, summary, description, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
       )
       .eq("id", id)
       .maybeSingle();
@@ -74,7 +75,12 @@ export default async function ProductEditorPage({
     };
   }
 
-  const topCategories = categories.filter((c) => !c.parentSlug);
+  const categoryOptions = categories.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    label: c.nameTh ?? c.name,
+    parentSlug: c.parentSlug,
+  }));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -134,42 +140,11 @@ export default async function ProductEditorPage({
               />
             </div>
 
-            {/* Brand */}
-            <div className="flex flex-col gap-1">
-              <label className="font-label-caps text-label-caps text-on-surface-variant">แบรนด์</label>
-              <select
-                name="brand_id"
-                defaultValue={product?.brand_id ?? ""}
-                className="rounded-lg border border-outline-variant bg-white px-4 py-3 font-body-md text-body-md outline-none focus:border-primary"
-              >
-                <option value="">— เลือกแบรนด์ —</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Category */}
-            <div className="flex flex-col gap-1">
-              <label className="font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</label>
-              <select
-                name="category_id"
-                defaultValue={product?.category_id ?? ""}
-                className="rounded-lg border border-outline-variant bg-white px-4 py-3 font-body-md text-body-md outline-none focus:border-primary"
-              >
-                <option value="">— เลือกหมวดหมู่ —</option>
-                {topCategories.map((cat) => (
-                  <optgroup key={cat.slug} label={cat.nameTh ?? cat.name}>
-                    <option value={cat.id}>{cat.nameTh ?? cat.name}</option>
-                    {categories
-                      .filter((c) => c.parentSlug === cat.slug)
-                      .map((sub) => (
-                        <option key={sub.id} value={sub.id}>— {sub.nameTh ?? sub.name}</option>
-                      ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
+            {/* หมวดหมู่ + หมวดหมู่ย่อย (admin can add new ones inline) */}
+            <CategorySelect
+              categories={categoryOptions}
+              defaultCategoryId={product?.category_id ?? null}
+            />
 
             {/* Status */}
             <div className="flex flex-col gap-1">

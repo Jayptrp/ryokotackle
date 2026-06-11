@@ -5,12 +5,6 @@ export type MediaType = Database["public"]["Enums"]["media_type"];
 export type MediaProvider = Database["public"]["Enums"]["media_provider"];
 export type SalesChannel = Database["public"]["Enums"]["sales_channel"];
 
-export interface Brand {
-  id: string;
-  slug: string;
-  name: string;
-}
-
 export interface Category {
   id: string;
   slug: string;
@@ -74,7 +68,6 @@ export interface ProductListItem {
   nameTh: string | null;
   summary: string | null;
   status: ProductStatus;
-  brand: Pick<Brand, "slug" | "name"> | null;
   category: Pick<Category, "slug" | "name" | "nameTh"> | null;
   primaryImage: string | null;
   createdAt: string;
@@ -90,7 +83,6 @@ export interface Product {
   description: string | null;
   status: ProductStatus;
   isFeatured: boolean;
-  brand: Brand | null;
   category: Category | null;
   media: ProductMedia[];
   channels: ProductChannel[];
@@ -98,7 +90,7 @@ export interface Product {
 
 export interface ProductQuery {
   category?: string;
-  brand?: string;
+  subcategory?: string;
   q?: string;
   sort?: "name" | "newest";
   page?: number;

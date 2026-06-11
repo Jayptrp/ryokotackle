@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Icon } from "@/components/icon";
-import { getBrands, getCategories } from "@/lib/queries";
+import { getCategories } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -14,24 +14,23 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; category?: string; brand?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; category?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const q = params.q ?? "";
   const statusFilter = params.status ?? "";
   const categoryFilter = params.category ?? "";
-  const brandFilter = params.brand ?? "";
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const pageSize = 30;
   const from = (page - 1) * pageSize;
 
   const supabase = await createAdminClient();
-  const [brands, categories] = await Promise.all([getBrands(), getCategories()]);
+  const categories = await getCategories();
 
   let query = supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, status, is_featured, brand:brands(name), category:categories!products_category_id_fkey(name)",
+      "id, slug, name, name_th, status, is_featured, category:categories!products_category_id_fkey(name)",
       { count: "exact" },
     )
     .order("name");
@@ -41,10 +40,6 @@ export default async function AdminPage({
   if (categoryFilter) {
     const cat = categories.find((c) => c.slug === categoryFilter);
     if (cat) query = query.eq("category_id", cat.id);
-  }
-  if (brandFilter) {
-    const brand = brands.find((b) => b.slug === brandFilter);
-    if (brand) query = query.eq("brand_id", brand.id);
   }
 
   const { data: products, count } = await query.range(from, from + pageSize - 1);
@@ -56,7 +51,6 @@ export default async function AdminPage({
     if (q) p.set("q", q);
     if (statusFilter) p.set("status", statusFilter);
     if (categoryFilter) p.set("category", categoryFilter);
-    if (brandFilter) p.set("brand", brandFilter);
     if (page > 1) p.set("page", String(page));
     Object.entries(overrides).forEach(([k, v]) => v ? p.set(k, v) : p.delete(k));
     const s = p.toString();
@@ -116,23 +110,13 @@ export default async function AdminPage({
             </optgroup>
           ))}
         </select>
-        <select
-          name="brand"
-          defaultValue={brandFilter}
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
-        >
-          <option value="">แบรนด์ทั้งหมด</option>
-          {brands.map((b) => (
-            <option key={b.slug} value={b.slug}>{b.name}</option>
-          ))}
-        </select>
         <button
           type="submit"
           className="rounded-lg bg-surface-container px-4 py-2 font-label-caps text-label-caps text-on-surface transition-colors hover:bg-surface-container-high"
         >
           กรอง
         </button>
-        {(q || statusFilter || categoryFilter || brandFilter) && (
+        {(q || statusFilter || categoryFilter) && (
           <Link
             href="/admin"
             className="rounded-lg px-4 py-2 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:text-primary"
@@ -148,7 +132,6 @@ export default async function AdminPage({
           <thead>
             <tr className="border-b border-outline-variant bg-surface-container">
               <th className="px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">ชื่อสินค้า</th>
-              <th className="px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">แบรนด์</th>
               <th className="px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</th>
               <th className="px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">สถานะ</th>
               <th className="px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">แนะนำ</th>
@@ -158,14 +141,13 @@ export default async function AdminPage({
           <tbody>
             {!products?.length && (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center font-body-sm text-body-sm text-on-surface-variant">
+                <td colSpan={5} className="px-4 py-12 text-center font-body-sm text-body-sm text-on-surface-variant">
                   ไม่พบสินค้า
                 </td>
               </tr>
             )}
             {products?.map((p, i) => {
               const status = STATUS_LABELS[p.status] ?? STATUS_LABELS.draft;
-              const brand = p.brand as { name: string } | null;
               const category = p.category as { name: string } | null;
               return (
                 <tr
@@ -175,9 +157,6 @@ export default async function AdminPage({
                   <td className="px-4 py-3">
                     <p className="font-body-sm text-body-sm font-medium text-on-surface">{p.name}</p>
                     {p.name_th && <p className="font-body-sm text-body-sm text-on-surface-variant">{p.name_th}</p>}
-                  </td>
-                  <td className="px-4 py-3 font-body-sm text-body-sm text-on-surface-variant">
-                    {brand?.name ?? "—"}
                   </td>
                   <td className="px-4 py-3 font-body-sm text-body-sm text-on-surface-variant">
                     {category?.name ?? "—"}

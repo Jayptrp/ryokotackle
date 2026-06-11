@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { ProductsBrowser } from "@/components/products-browser";
-import {
-  getAllPublishedListItems,
-  getBrands,
-  getCategories,
-} from "@/lib/queries";
+import { getAllPublishedListItems, getCategories } from "@/lib/queries";
 import { SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -17,9 +13,8 @@ export const metadata: Metadata = {
 // Static: the catalog is loaded once and filtered in the browser, so there is
 // no per-request server work. Revalidated on demand when admins edit products.
 export default async function ProductsPage() {
-  const [categories, brands, products] = await Promise.all([
+  const [categories, products] = await Promise.all([
     getCategories(),
-    getBrands(),
     getAllPublishedListItems(),
   ]);
 
@@ -35,11 +30,7 @@ export default async function ProductsPage() {
         </p>
       </header>
 
-      <ProductsBrowser
-        products={products}
-        categories={categories}
-        brands={brands}
-      />
+      <ProductsBrowser products={products} categories={categories} />
     </Container>
   );
 }

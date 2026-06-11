@@ -2,7 +2,6 @@ import "server-only";
 import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type {
-  Brand,
   CarouselSlide,
   Category,
   CategoryCard,
@@ -33,7 +32,6 @@ function mapListItem(row: any): ProductListItem {
     nameTh: row.name_th,
     summary: row.summary,
     status: row.status,
-    brand: row.brand ? { slug: row.brand.slug, name: row.brand.name } : null,
     category: row.category
       ? { slug: row.category.slug, name: row.category.name, nameTh: row.category.name_th }
       : null,
@@ -58,7 +56,7 @@ function mapCategory(row: any): Category {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const LIST_SELECT =
-  "id, slug, name, name_th, summary, status, created_at, brand:brands(slug, name), category:categories!products_category_id_fkey(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
+  "id, slug, name, name_th, summary, status, created_at, category:categories!products_category_id_fkey(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
 
 /* --------------------------------------------------------------- categories */
 
@@ -161,17 +159,6 @@ async function categorySlugWithDescendants(slug: string): Promise<string[]> {
   return [slug, ...children];
 }
 
-/* ------------------------------------------------------------------- brands */
-
-export async function getBrands(): Promise<Brand[]> {
-  const supabase = createPublicClient();
-  const { data } = await supabase
-    .from("brands")
-    .select("id, slug, name")
-    .order("name");
-  return data ?? [];
-}
-
 /* ----------------------------------------------------------------- products */
 
 /** Paginated, filterable product listing (published only via RLS). */
@@ -187,12 +174,6 @@ export async function getProducts(
     .from("products")
     .select(LIST_SELECT, { count: "exact" })
     .eq("status", "published");
-
-  if (query.brand) {
-    const all = await getBrands();
-    const brand = all.find((b) => b.slug === query.brand);
-    builder = builder.eq("brand_id", brand?.id ?? "00000000-0000-0000-0000-000000000000");
-  }
 
   if (query.category) {
     const slugs = await categorySlugWithDescendants(query.category);
@@ -269,7 +250,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, status, is_featured, brand:brands(id, slug, name), category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
+      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -305,7 +286,6 @@ export async function getProductBySlug(
     description: row.description,
     status: row.status,
     isFeatured: row.is_featured,
-    brand: row.brand ?? null,
     category,
     media: (row.media ?? [])
       .map((m: any) => ({

@@ -13,7 +13,7 @@ function slugify(str: string) {
 }
 
 async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminClient>>, base: string, excludeId?: string) {
-  let slug = slugify(base);
+  const slug = slugify(base);
   let attempt = 0;
   while (true) {
     const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
@@ -34,7 +34,6 @@ export async function saveProduct(formData: FormData) {
   const nameTh = (formData.get("name_th") as string)?.trim() || null;
   const summary = (formData.get("summary") as string)?.trim() || null;
   const description = (formData.get("description") as string) || null;
-  const brandId = (formData.get("brand_id") as string) || null;
   const categoryId = (formData.get("category_id") as string) || null;
   const status = (formData.get("status") as string) || "draft";
   const isFeatured = formData.get("is_featured") === "true";
@@ -49,7 +48,6 @@ export async function saveProduct(formData: FormData) {
     name_th: nameTh,
     summary,
     description,
-    brand_id: brandId || null,
     category_id: categoryId || null,
     status: status as never,
     is_featured: isFeatured,
@@ -206,4 +204,62 @@ export async function deleteProduct(id: string) {
   revalidatePath("/admin");
   if (data?.slug) revalidatePath(`/products/${data.slug}`);
   redirect("/admin");
+}
+
+/**
+ * Create a category (parentId = null) or subcategory (parentId set) on the fly
+ * from the product editor. Name is used for both EN and TH; slug is derived and
+ * de-duplicated. Returns the new row so the editor can select it immediately.
+ */
+export async function createCategory(
+  name: string,
+  parentId: string | null,
+): Promise<{ id: string; slug: string; name: string }> {
+  const supabase = await createAdminClient();
+  const clean = name.trim();
+  if (!clean) throw new Error("Category name is required");
+
+  // Unique slug among categories.
+  const base = slugify(clean) || "category";
+  let slug = base;
+  let attempt = 0;
+  while (true) {
+    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
+    const { data } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!data) {
+      slug = candidate;
+      break;
+    }
+    attempt++;
+  }
+
+  const { data: last } = await supabase
+    .from("categories")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      name: clean,
+      name_th: clean,
+      slug,
+      parent_id: parentId,
+      sort_order: (last?.sort_order ?? 0) + 10,
+    })
+    .select("id, slug, name")
+    .single();
+  if (error) throw error;
+
+  revalidatePath("/");
+  revalidatePath("/products");
+  revalidatePath("/admin");
+
+  return { id: data.id, slug: data.slug, name: data.name };
 }
