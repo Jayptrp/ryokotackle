@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
+import Image from "next/image";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { ProductCard } from "@/components/product-card";
-import { getCategoryTree, getFeatured, getNewArrivals } from "@/lib/queries";
+import {
+  getCarouselSlides,
+  getCategoryCards,
+  getFeatured,
+  getNewArrivals,
+} from "@/lib/queries";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -14,9 +20,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [categories, featured, newArrivals] = await Promise.all([
-    getCategoryTree(),
-    getFeatured(8),
+  const [slides, categories, featured, newArrivals] = await Promise.all([
+    getCarouselSlides(),
+    getCategoryCards(),
+    getFeatured(),
     getNewArrivals(8),
   ]);
 
@@ -30,7 +37,7 @@ export default async function HomePage() {
       </h1>
 
       <Container className="pt-stack-md">
-        <HeroCarousel />
+        <HeroCarousel slides={slides} />
       </Container>
 
       {/* Categories */}
@@ -52,20 +59,32 @@ export default async function HomePage() {
               <Link
                 key={category.slug}
                 href={`/category/${category.slug}`}
-                className="group flex flex-col items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-stack-md text-center transition-all hover:border-secondary hover:shadow-sm active:scale-[0.97] active:border-primary active:bg-secondary-container/40"
+                className="group relative flex aspect-square flex-col justify-end overflow-hidden rounded-xl border border-outline-variant bg-primary-container transition-all hover:border-secondary hover:shadow-md active:scale-[0.98]"
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-primary transition-colors group-hover:bg-secondary-container group-hover:text-on-secondary-container group-active:bg-secondary-container group-active:text-on-secondary-container">
-                  <Icon name={category.icon ?? "category"} className="text-2xl" />
-                </span>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-label-caps text-label-caps font-medium">
+                {/* Background image (uploaded → product → auto-pick) or gradient fallback */}
+                {category.backgroundImage ? (
+                  <Image
+                    src={category.backgroundImage}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary" />
+                )}
+                {/* Readability scrim */}
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/25 to-transparent" />
+
+                {/* Footer: icon down on the left, beside the name */}
+                <div className="relative flex items-center gap-2 p-stack-md">
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition-colors group-hover:bg-secondary group-hover:text-on-secondary">
+                    <Icon name={category.icon ?? "category"} className="text-xl" />
+                  </span>
+                  <span className="font-body-md text-body-md font-medium text-on-primary">
                     {category.nameTh ?? category.name}
                   </span>
-                  {category.nameTh && category.nameTh !== category.name && (
-                    <span className="text-xs text-on-surface-variant">
-                      {category.name}
-                    </span>
-                  )}
                 </div>
               </Link>
             ))}

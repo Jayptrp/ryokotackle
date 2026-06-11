@@ -13,6 +13,16 @@ const NAV = [
   { href: "/admin/pages/about", label: "แก้ไขหน้าเกี่ยวกับเรา", icon: "description" },
 ] as const;
 
+// Grouped section for editing the homepage.
+const HOME_NAV = {
+  label: "แก้ไขหน้าแรก",
+  items: [
+    { href: "/admin/home/carousel", label: "แก้ไข carousel", icon: "view_carousel" },
+    { href: "/admin/home/categories", label: "แก้ไขรูปหมวดหมู่", icon: "grid_view" },
+    { href: "/admin/home/featured", label: "แก้ไขสินค้าแนะนำ", icon: "star" },
+  ],
+} as const;
+
 export default async function AdminLayout({
   children,
 }: {
@@ -49,6 +59,21 @@ export default async function AdminLayout({
         {/* Nav */}
         <nav className="flex flex-1 flex-col gap-1 p-3">
           {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 font-body-sm text-body-sm text-on-surface-variant transition-colors hover:bg-surface-container hover:text-primary"
+            >
+              <Icon name={item.icon} className="text-xl" />
+              {item.label}
+            </Link>
+          ))}
+
+          {/* Homepage editing group */}
+          <p className="mt-4 mb-1 px-3 font-label-caps text-label-caps text-on-surface-variant/70">
+            {HOME_NAV.label}
+          </p>
+          {HOME_NAV.items.map((item) => (
             <Link
               key={item.href}
               href={item.href}

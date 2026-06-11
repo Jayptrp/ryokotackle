@@ -1,8 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type {
   Brand,
+  CarouselSlide,
   Category,
+  CategoryCard,
   Product,
   ProductListItem,
   ProductQuery,
@@ -48,36 +51,39 @@ function mapCategory(row: any): Category {
     parentSlug: row.parentSlug ?? null,
     icon: row.icon,
     sortOrder: row.sort_order,
+    imageUrl: row.image_url ?? null,
+    imageProductId: row.image_product_id ?? null,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const LIST_SELECT =
-  "id, slug, name, name_th, summary, status, created_at, brand:brands(slug, name), category:categories(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
+  "id, slug, name, name_th, summary, status, created_at, brand:brands(slug, name), category:categories!products_category_id_fkey(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
 
 /* --------------------------------------------------------------- categories */
 
-let categoriesCache: Category[] | null = null;
-
-/** All categories (flat), with `parentSlug` resolved. Cached per request module. */
-export async function getCategories(): Promise<Category[]> {
-  if (categoriesCache) return categoriesCache;
+/**
+ * All categories (flat), with `parentSlug` resolved. Memoized per-request with
+ * React `cache()` — dedupes the repeated calls within a single render without
+ * persisting stale data across requests (a process-global cache would hide admin
+ * edits to category images until the server restarted).
+ */
+export const getCategories = cache(async (): Promise<Category[]> => {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("categories")
-    .select("id, slug, name, name_th, icon, sort_order, parent_id")
+    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id")
     .order("sort_order");
 
   const rows = data ?? [];
   const byId = new Map(rows.map((r) => [r.id, r]));
-  categoriesCache = rows.map((r) =>
+  return rows.map((r) =>
     mapCategory({
       ...r,
       parentSlug: r.parent_id ? (byId.get(r.parent_id)?.slug ?? null) : null,
     }),
   );
-  return categoriesCache;
-}
+});
 
 /** Top-level categories with their `children` nested. */
 export async function getCategoryTree(): Promise<Category[]> {
@@ -89,6 +95,56 @@ export async function getCategoryTree(): Promise<Category[]> {
       .filter((child) => child.parentSlug === c.slug)
       .sort((a, b) => a.sortOrder - b.sortOrder),
   }));
+}
+
+/**
+ * Top-level categories for the homepage grid, each with a resolved card
+ * background image. Resolution order: admin-uploaded image → the primary image
+ * of the admin-selected product → the first available primary image of any
+ * published product in the category (or its sub-categories).
+ */
+export async function getCategoryCards(): Promise<CategoryCard[]> {
+  const [all, products] = await Promise.all([
+    getCategories(),
+    getAllPublishedListItems(),
+  ]);
+
+  const topLevel = all
+    .filter((c) => !c.parentSlug)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Map any category slug → its top-level slug (taxonomy is at most 2 deep).
+  const topOf = (slug: string): string => {
+    const c = all.find((x) => x.slug === slug);
+    return c?.parentSlug ?? slug;
+  };
+
+  // Bucket published products (with an image) under their top-level category.
+  const imagesByTop = new Map<string, string[]>();
+  const imageById = new Map<string, string>();
+  for (const p of products) {
+    if (p.primaryImage) imageById.set(p.id, p.primaryImage);
+    if (!p.category || !p.primaryImage) continue;
+    const top = topOf(p.category.slug);
+    const list = imagesByTop.get(top) ?? [];
+    list.push(p.primaryImage);
+    imagesByTop.set(top, list);
+  }
+
+  return topLevel.map((c) => {
+    const background =
+      c.imageUrl ??
+      (c.imageProductId ? imageById.get(c.imageProductId) : undefined) ??
+      imagesByTop.get(c.slug)?.[0] ??
+      null;
+    return {
+      slug: c.slug,
+      name: c.name,
+      nameTh: c.nameTh,
+      icon: c.icon,
+      backgroundImage: background,
+    };
+  });
 }
 
 export async function getCategoryBySlug(
@@ -177,15 +233,20 @@ export async function getAllPublishedListItems(): Promise<ProductListItem[]> {
   return (data ?? []).map(mapListItem);
 }
 
-export async function getFeatured(limit = 8): Promise<ProductListItem[]> {
+/**
+ * Published featured products. Pass a `limit` to cap the count; omit it to
+ * return every featured product (the homepage shows them all, unbounded).
+ */
+export async function getFeatured(limit?: number): Promise<ProductListItem[]> {
   const supabase = createPublicClient();
-  const { data } = await supabase
+  let builder = supabase
     .from("products")
     .select(LIST_SELECT)
     .eq("status", "published")
     .eq("is_featured", true)
-    .order("name")
-    .limit(limit);
+    .order("name");
+  if (limit !== undefined) builder = builder.limit(limit);
+  const { data } = await builder;
   return (data ?? []).map(mapListItem);
 }
 
@@ -208,7 +269,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, status, is_featured, brand:brands(id, slug, name), category:categories(id, slug, name, name_th, icon, sort_order, parent_id), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
+      "id, slug, name, name_th, summary, description, status, is_featured, brand:brands(id, slug, name), category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -227,6 +288,8 @@ export async function getProductBySlug(
       nameTh: row.category.name_th,
       icon: row.category.icon,
       sortOrder: row.category.sort_order,
+      imageUrl: null,
+      imageProductId: null,
       parentSlug: row.category.parent_id
         ? (all.find((c) => c.id === row.category.parent_id)?.slug ?? null)
         : null,
@@ -275,6 +338,43 @@ export async function getPublishedSlugs(): Promise<string[]> {
     .select("slug")
     .eq("status", "published");
   return (data ?? []).map((r) => r.slug);
+}
+
+/* -------------------------------------------------------- carousel slides */
+
+/**
+ * Hero carousel slides in display order (admin-editable). Product-backed slides
+ * resolve their image and title from the product; uploaded slides use the stored
+ * image_url/title. Slides with no resolvable image are dropped.
+ */
+export async function getCarouselSlides(): Promise<CarouselSlide[]> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("carousel_slides")
+    .select(
+      "id, image_url, title, subtitle, sort_order, product_id, product:products(name, name_th, media:product_media(url, type, is_primary, sort_order))",
+    )
+    .order("sort_order");
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  return (data ?? [])
+    .map((row: any) => {
+      const product = row.product;
+      const imageUrl = product
+        ? pickPrimaryImage(product.media ?? [])
+        : row.image_url;
+      if (!imageUrl) return null;
+      return {
+        id: row.id,
+        imageUrl,
+        title: product ? (product.name_th ?? product.name) : row.title,
+        subtitle: row.subtitle,
+        sortOrder: row.sort_order,
+        productId: row.product_id ?? null,
+      } satisfies CarouselSlide;
+    })
+    .filter((s): s is CarouselSlide => s !== null);
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 /* ----------------------------------------------------------------- pages */

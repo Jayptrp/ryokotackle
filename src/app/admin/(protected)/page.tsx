@@ -31,7 +31,7 @@ export default async function AdminPage({
   let query = supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, status, is_featured, brand:brands(name), category:categories(name)",
+      "id, slug, name, name_th, status, is_featured, brand:brands(name), category:categories!products_category_id_fkey(name)",
       { count: "exact" },
     )
     .order("name");
