@@ -30,7 +30,7 @@ export default async function AdminPage({
   let query = supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, status, is_featured, category:categories!products_category_id_fkey(name)",
+      "id, slug, name, name_th, status, is_featured, category:categories!products_category_id_fkey(name, name_th, parent_id)",
       { count: "exact" },
     )
     .order("name");
@@ -148,7 +148,19 @@ export default async function AdminPage({
             )}
             {products?.map((p, i) => {
               const status = STATUS_LABELS[p.status] ?? STATUS_LABELS.draft;
-              const category = p.category as { name: string } | null;
+              const cat = p.category as
+                | { name: string; name_th: string | null; parent_id: string | null }
+                | null;
+              let categoryLabel = "—";
+              if (cat) {
+                const self = cat.name_th ?? cat.name;
+                const parent = cat.parent_id
+                  ? categories.find((c) => c.id === cat.parent_id)
+                  : null;
+                categoryLabel = parent
+                  ? `${parent.nameTh ?? parent.name} › ${self}`
+                  : self;
+              }
               return (
                 <tr
                   key={p.id}
@@ -159,7 +171,7 @@ export default async function AdminPage({
                     {p.name_th && <p className="font-body-sm text-body-sm text-on-surface-variant">{p.name_th}</p>}
                   </td>
                   <td className="px-4 py-3 font-body-sm text-body-sm text-on-surface-variant">
-                    {category?.name ?? "—"}
+                    {categoryLabel}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 font-label-caps text-label-caps ${status.color}`}>

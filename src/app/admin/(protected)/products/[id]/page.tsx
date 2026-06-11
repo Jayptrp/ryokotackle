@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCategories } from "@/lib/queries";
 import { saveProduct } from "@/app/admin/products/actions";
 import { CategorySelect } from "@/components/admin/category-select";
+import { ProductNameField } from "@/components/admin/product-name-field";
 import { MediaManager } from "@/components/admin/media-manager";
 import { ChannelManager } from "@/components/admin/channel-manager";
 import { DescriptionForm } from "@/components/admin/description-form";
@@ -15,10 +16,13 @@ export const dynamic = "force-dynamic";
 
 export default async function ProductEditorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error: pageError } = await searchParams;
   const isNew = id === "new";
 
   const supabase = await createAdminClient();
@@ -110,6 +114,13 @@ export default async function ProductEditorPage({
         )}
       </div>
 
+      {pageError === "duplicate-name" && (
+        <div className="mb-6 flex items-center gap-2 rounded-lg border border-error/40 bg-error-container/30 px-4 py-3 font-body-sm text-body-sm text-on-error-container">
+          <Icon name="error" className="text-lg text-error" />
+          มีสินค้าชื่อนี้อยู่แล้ว — กรุณาใช้ชื่ออื่น
+        </div>
+      )}
+
       <form action={saveProduct} className="flex flex-col gap-6">
         {product && <input type="hidden" name="id" value={product.id} />}
 
@@ -117,19 +128,11 @@ export default async function ProductEditorPage({
         <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-sm">
           <h2 className="mb-4 font-headline-sm text-headline-sm text-primary">ข้อมูลพื้นฐาน</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Name */}
-            <div className="flex flex-col gap-1 md:col-span-2">
-              <label className="font-label-caps text-label-caps text-on-surface-variant">
-                ชื่อสินค้า (EN) <span className="text-error">*</span>
-              </label>
-              <input
-                name="name"
-                required
-                defaultValue={product?.name ?? ""}
-                className="rounded-lg border border-outline-variant bg-white px-4 py-3 font-body-md text-body-md outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                placeholder="ชื่อสินค้าภาษาอังกฤษ"
-              />
-            </div>
+            {/* Name (with live duplicate check) */}
+            <ProductNameField
+              defaultValue={product?.name ?? ""}
+              excludeId={product?.id}
+            />
             <div className="flex flex-col gap-1 md:col-span-2">
               <label className="font-label-caps text-label-caps text-on-surface-variant">ชื่อสินค้า (TH)</label>
               <input

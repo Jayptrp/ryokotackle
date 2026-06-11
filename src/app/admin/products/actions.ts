@@ -25,6 +25,27 @@ async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminC
   }
 }
 
+/**
+ * Whether a product with this name already exists (case-insensitive, EN or TH),
+ * excluding the given product id. Used for the live check in the editor and as a
+ * server-side guard in saveProduct.
+ */
+export async function isProductNameTaken(
+  name: string,
+  excludeId?: string,
+): Promise<boolean> {
+  const clean = name.trim().toLowerCase();
+  if (!clean) return false;
+  const supabase = await createAdminClient();
+  const { data } = await supabase.from("products").select("id, name, name_th");
+  return (data ?? []).some(
+    (p) =>
+      p.id !== excludeId &&
+      (p.name?.trim().toLowerCase() === clean ||
+        p.name_th?.trim().toLowerCase() === clean),
+  );
+}
+
 /** Create or update a product's core fields. */
 export async function saveProduct(formData: FormData) {
   const supabase = await createAdminClient();
@@ -41,6 +62,16 @@ export async function saveProduct(formData: FormData) {
   if (!name) return;
 
   const isNew = !id;
+
+  // Reject a duplicate product name (case-insensitive, excluding this product).
+  if (await isProductNameTaken(name, id ?? undefined)) {
+    redirect(
+      isNew
+        ? "/admin/products/new?error=duplicate-name"
+        : `/admin/products/${id}?error=duplicate-name`,
+    );
+  }
+
   const slug = await ensureUniqueSlug(supabase, name, id ?? undefined);
 
   const payload = {
