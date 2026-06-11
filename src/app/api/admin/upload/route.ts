@@ -7,7 +7,8 @@ const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
 export async function POST(request: NextRequest) {
   const supabase = await createAdminClient();
 
-  // Auth check — middleware already guards /admin routes, but API is separate
+  // Auth check — the admin layout guards /admin pages, but this API route is a
+  // separate entry point (no layout above it), so re-check here.
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
