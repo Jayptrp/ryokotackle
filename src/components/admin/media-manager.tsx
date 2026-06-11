@@ -12,11 +12,47 @@ interface Props {
   initial: ProductMedia[];
 }
 
+/** Extract an 11-char YouTube video id from common URL shapes. */
+function youTubeId(url: string): string | null {
+  const m = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  return m ? m[1] : null;
+}
+
 export function MediaManager({ productId, initial }: Props) {
   const [items, setItems] = useState(initial);
   const [uploading, setUploading] = useState(false);
+  const [ytUrl, setYtUrl] = useState("");
+  const [ytError, setYtError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function handleAddYouTube() {
+    const url = ytUrl.trim();
+    if (!url) return;
+    if (!youTubeId(url)) {
+      setYtError("ลิงก์ YouTube ไม่ถูกต้อง");
+      return;
+    }
+    setYtError(null);
+    startTransition(async () => {
+      await addMedia(productId, url, "video", "youtube");
+      setItems((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          type: "video",
+          provider: "youtube",
+          url,
+          alt: null,
+          sortOrder: prev.length,
+          isPrimary: prev.length === 0,
+        },
+      ]);
+      setYtUrl("");
+    });
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -91,6 +127,19 @@ export function MediaManager({ productId, initial }: Props) {
                     >
                       {item.type === "image" ? (
                         <Image src={item.url} alt={item.alt ?? ""} fill className="object-cover" unoptimized />
+                      ) : youTubeId(item.url) ? (
+                        <>
+                          <Image
+                            src={`https://img.youtube.com/vi/${youTubeId(item.url)}/mqdefault.jpg`}
+                            alt={item.alt ?? ""}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                            <Icon name="smart_display" filled className="text-4xl text-white" />
+                          </div>
+                        </>
                       ) : (
                         <div className="flex h-full items-center justify-center">
                           <Icon name="play_circle" className="text-4xl text-on-surface-variant" />
@@ -147,8 +196,45 @@ export function MediaManager({ productId, initial }: Props) {
         className="hidden"
         onChange={handleFileChange}
       />
-      <p className="font-body-sm text-body-sm text-on-surface-variant">
-        รองรับ JPG, PNG, WEBP, MP4 — ลากเพื่อเรียงลำดับ, รูปแรกจะเป็นรูปหน้าปก
+
+      {/* Add a YouTube link */}
+      <div className="mt-3 flex flex-col gap-1">
+        <label className="font-label-caps text-label-caps text-on-surface-variant">
+          เพิ่มวิดีโอจาก YouTube
+        </label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Icon
+              name="smart_display"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant"
+            />
+            <input
+              type="url"
+              value={ytUrl}
+              onChange={(e) => {
+                setYtUrl(e.target.value);
+                setYtError(null);
+              }}
+              placeholder="วางลิงก์ YouTube เช่น https://youtu.be/..."
+              className="w-full rounded-lg border border-outline-variant bg-white py-2 pl-9 pr-3 font-body-sm text-body-sm outline-none focus:border-primary"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleAddYouTube}
+            disabled={isPending || !ytUrl.trim()}
+            className="flex-none rounded-lg bg-primary px-4 py-2 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
+          >
+            เพิ่มวิดีโอ
+          </button>
+        </div>
+        {ytError && (
+          <p className="font-body-sm text-body-sm text-error">{ytError}</p>
+        )}
+      </div>
+
+      <p className="mt-2 font-body-sm text-body-sm text-on-surface-variant">
+        รองรับ JPG, PNG, WEBP, MP4 และลิงก์ YouTube — ลากเพื่อเรียงลำดับ, รูปแรกจะเป็นรูปหน้าปก
       </p>
     </div>
   );
