@@ -1,0 +1,32 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # every day at 2:00 AM UTC
+  workflow_dispatch:        # allow manual trigger from GitHub Actions tab
+
+jobs:
+  backup:
+    name: Backup Supabase DB
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Wake up Supabase project
+        run: |
+          curl -sf "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}" || true
+
+      - name: Dump database
+        run: |
+          pg_dump "${{ secrets.DATABASE_URL }}" \
+            --no-owner --no-acl \
+            -F c \
+            -f backup-$(date +%Y-%m-%d).dump
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}-${{ github.run_attempt }}
+          path: backup-*.dump
+          retention-days: 90
