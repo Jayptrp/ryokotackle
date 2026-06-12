@@ -80,6 +80,52 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
     content: defaultValue ?? "",
     editorProps: {
       attributes: { class: CONTENT_CLASS },
+      handlePaste: (view, event) => {
+        const items = Array.from(event.clipboardData?.items || []);
+        const files = items
+          .filter((item) => item.type.startsWith("image/"))
+          .map((item) => item.getAsFile())
+          .filter((file): file is File => file !== null);
+
+        if (files.length > 0 && productId) {
+          files.forEach(async (file) => {
+            const formData = new FormData();
+            formData.set("file", file);
+            formData.set("productId", productId);
+            formData.set("folder", "inline");
+            const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+            if (res.ok) {
+              const { url } = await res.json();
+              editor?.chain().focus().setImage({ src: url }).run();
+            }
+          });
+          return true; // prevent default paste
+        }
+        return false; // let Tiptap handle other types (text, etc)
+      },
+      handleDrop: (view, event, slice, moved) => {
+        if (moved) return false; // let Tiptap handle internal moves
+        const files = Array.from(event.dataTransfer?.files || []).filter((file) =>
+          file.type.startsWith("image/")
+        );
+
+        if (files.length > 0 && productId) {
+          event.preventDefault();
+          files.forEach(async (file) => {
+            const formData = new FormData();
+            formData.set("file", file);
+            formData.set("productId", productId);
+            formData.set("folder", "inline");
+            const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+            if (res.ok) {
+              const { url } = await res.json();
+              editor?.chain().focus().setImage({ src: url }).run();
+            }
+          });
+          return true;
+        }
+        return false;
+      },
     },
   });
 
