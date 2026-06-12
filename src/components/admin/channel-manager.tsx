@@ -20,7 +20,11 @@ export function ChannelManager({ rows, onRowsChange }: Props) {
   function add() {
     const used = new Set(rows.map((r) => r.channel));
     const next = CHANNELS.find(([ch]) => !used.has(ch));
-    if (next) onRowsChange([...rows, { channel: next[0], url: "" }]);
+    if (next) {
+      const channel = next[0];
+      const url = channel === "facebook" ? "https://www.facebook.com/ryoko.tackle" : "";
+      onRowsChange([...rows, { channel, url }]);
+    }
   }
 
   function remove(i: number) {
@@ -41,9 +45,20 @@ export function ChannelManager({ rows, onRowsChange }: Props) {
             </span>
             <select
               value={row.channel}
-              onChange={(e) =>
-                onRowsChange(rows.map((r, idx) => idx === i ? { ...r, channel: e.target.value as SalesChannel } : r))
-              }
+              onChange={(e) => {
+                const newChannel = e.target.value as SalesChannel;
+                onRowsChange(
+                  rows.map((r, idx) =>
+                    idx === i
+                      ? {
+                          ...r,
+                          channel: newChannel,
+                          url: newChannel === "facebook" && !r.url ? "https://www.facebook.com/ryoko.tackle" : r.url,
+                        }
+                      : r
+                  )
+                );
+              }}
               className="rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
             >
               {CHANNELS.map(([ch, m]) => (
