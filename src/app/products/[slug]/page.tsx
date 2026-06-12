@@ -5,6 +5,7 @@ import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { ProductGallery } from "@/components/product-gallery";
 import { RichContent } from "@/components/rich-content";
+import { ScrollToButton } from "@/components/scroll-to-button";
 import { JsonLd } from "@/components/json-ld";
 import { CHANNEL_META } from "@/lib/channels";
 import { getProductBySlug, getPublishedSlugs } from "@/lib/queries";
@@ -230,12 +231,19 @@ export default async function ProductDetailPage({
               </Link>
             </div>
           )}
+
+          {product.description && (
+            <ScrollToButton targetId="product-detail" label="ดูรายละเอียด" />
+          )}
         </div>
       </div>
 
       {/* Full detail */}
       {product.description && (
-        <div className="mt-section-gap border-t border-outline-variant pt-section-gap">
+        <div
+          id="product-detail"
+          className="mt-section-gap scroll-mt-24 border-t border-outline-variant pt-section-gap"
+        >
           <div className="mx-auto max-w-4xl">
             <h2 className="mb-stack-md flex items-center gap-2 font-headline-md text-headline-md text-primary">
               <span className="h-1 w-8 rounded-full bg-secondary" />

@@ -1,15 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { addMedia, deleteMedia, reorderMedia } from "@/app/admin/products/actions";
 import { Icon } from "@/components/icon";
 import type { ProductMedia } from "@/lib/types";
 
+export interface PendingMedia extends ProductMedia {
+  isNew?: boolean;     // uploaded to storage, not yet committed to DB
+  isDeleted?: boolean; // marked for deletion on next save
+}
+
 interface Props {
   productId: string;
-  initial: ProductMedia[];
+  items: PendingMedia[];
+  onItemsChange: (items: PendingMedia[]) => void;
 }
 
 /** Extract an 11-char YouTube video id from common URL shapes. */
@@ -20,44 +25,27 @@ function youTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-export function MediaManager({ productId, initial }: Props) {
-  const [items, setItems] = useState(initial);
+function reindex(items: PendingMedia[]): PendingMedia[] {
+  let idx = 0;
+  return items.map((m) => {
+    if (m.isDeleted) return m;
+    return { ...m, sortOrder: idx, isPrimary: idx++ === 0 };
+  });
+}
+
+export function MediaManager({ productId, items, onItemsChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [ytUrl, setYtUrl] = useState("");
   const [ytError, setYtError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function handleAddYouTube() {
-    const url = ytUrl.trim();
-    if (!url) return;
-    if (!youTubeId(url)) {
-      setYtError("ลิงก์ YouTube ไม่ถูกต้อง");
-      return;
-    }
-    setYtError(null);
-    startTransition(async () => {
-      await addMedia(productId, url, "video", "youtube");
-      setItems((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          type: "video",
-          provider: "youtube",
-          url,
-          alt: null,
-          sortOrder: prev.length,
-          isPrimary: prev.length === 0,
-        },
-      ]);
-      setYtUrl("");
-    });
-  }
+  const visible = items.filter((m) => !m.isDeleted);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     setUploading(true);
+    let next = [...items];
     for (const file of files) {
       const fd = new FormData();
       fd.set("file", file);
@@ -67,43 +55,60 @@ export function MediaManager({ productId, initial }: Props) {
       if (res.ok) {
         const { url } = await res.json();
         const type = file.type.startsWith("video") ? "video" : "image";
-        await addMedia(productId, url, type);
-        setItems((prev) => [
-          ...prev,
+        const visCount = next.filter((m) => !m.isDeleted).length;
+        next = [
+          ...next,
           {
             id: crypto.randomUUID(),
-            type,
+            type: type as "image" | "video",
             provider: null,
             url,
             alt: null,
-            sortOrder: prev.length,
-            isPrimary: prev.length === 0,
+            sortOrder: visCount,
+            isPrimary: visCount === 0,
+            isNew: true,
           },
-        ]);
+        ];
       }
     }
+    onItemsChange(next);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  function onDragEnd(result: DropResult) {
-    if (!result.destination) return;
-    const next = [...items];
-    const [moved] = next.splice(result.source.index, 1);
-    next.splice(result.destination.index, 0, moved);
-    const updated = next.map((item, i) => ({ ...item, sortOrder: i, isPrimary: i === 0 }));
-    setItems(updated);
-    startTransition(() => reorderMedia(productId, updated.map((i) => i.id)));
+  function handleAddYouTube() {
+    const url = ytUrl.trim();
+    if (!url) return;
+    if (!youTubeId(url)) { setYtError("ลิงก์ YouTube ไม่ถูกต้อง"); return; }
+    setYtError(null);
+    const visCount = visible.length;
+    onItemsChange([
+      ...items,
+      {
+        id: crypto.randomUUID(),
+        type: "video",
+        provider: "youtube",
+        url,
+        alt: null,
+        sortOrder: visCount,
+        isPrimary: visCount === 0,
+        isNew: true,
+      },
+    ]);
+    setYtUrl("");
   }
 
-  function handleDelete(item: ProductMedia) {
-    startTransition(async () => {
-      await deleteMedia(item.id, productId, item.url);
-      setItems((prev) => {
-        const next = prev.filter((i) => i.id !== item.id);
-        return next.map((i, idx) => ({ ...i, sortOrder: idx, isPrimary: idx === 0 }));
-      });
-    });
+  function handleDelete(item: PendingMedia) {
+    onItemsChange(reindex(items.map((m) => (m.id === item.id ? { ...m, isDeleted: true } : m))));
+  }
+
+  function onDragEnd(result: DropResult) {
+    if (!result.destination) return;
+    const reordered = [...visible];
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    const deleted = items.filter((m) => m.isDeleted);
+    onItemsChange(reindex([...reordered, ...deleted]));
   }
 
   return (
@@ -116,7 +121,7 @@ export function MediaManager({ productId, initial }: Props) {
               {...provided.droppableProps}
               className="mb-3 flex flex-wrap gap-3"
             >
-              {items.map((item, index) => (
+              {visible.map((item, index) => (
                 <Draggable key={item.id} draggableId={item.id} index={index}>
                   {(drag) => (
                     <div
@@ -150,10 +155,14 @@ export function MediaManager({ productId, initial }: Props) {
                           หลัก
                         </span>
                       )}
+                      {item.isNew && (
+                        <span className="absolute bottom-1 left-1 rounded bg-secondary px-1 font-label-caps text-label-caps text-on-secondary">
+                          ใหม่
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleDelete(item)}
-                        disabled={isPending}
                         className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-error opacity-0 transition-opacity group-hover:opacity-100"
                       >
                         <Icon name="close" className="text-sm" />
@@ -167,7 +176,6 @@ export function MediaManager({ productId, initial }: Props) {
               ))}
               {provided.placeholder}
 
-              {/* Upload button */}
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
@@ -188,33 +196,17 @@ export function MediaManager({ productId, initial }: Props) {
         </Droppable>
       </DragDropContext>
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFileChange} />
 
-      {/* Add a YouTube link */}
       <div className="mt-3 flex flex-col gap-1">
-        <label className="font-label-caps text-label-caps text-on-surface-variant">
-          เพิ่มวิดีโอจาก YouTube
-        </label>
+        <label className="font-label-caps text-label-caps text-on-surface-variant">เพิ่มวิดีโอจาก YouTube</label>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Icon
-              name="smart_display"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant"
-            />
+            <Icon name="smart_display" className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant" />
             <input
               type="url"
               value={ytUrl}
-              onChange={(e) => {
-                setYtUrl(e.target.value);
-                setYtError(null);
-              }}
+              onChange={(e) => { setYtUrl(e.target.value); setYtError(null); }}
               placeholder="วางลิงก์ YouTube เช่น https://youtu.be/..."
               className="w-full rounded-lg border border-outline-variant bg-white py-2 pl-9 pr-3 font-body-sm text-body-sm outline-none focus:border-primary"
             />
@@ -222,15 +214,13 @@ export function MediaManager({ productId, initial }: Props) {
           <button
             type="button"
             onClick={handleAddYouTube}
-            disabled={isPending || !ytUrl.trim()}
+            disabled={!ytUrl.trim()}
             className="flex-none rounded-lg bg-primary px-4 py-2 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
           >
             เพิ่มวิดีโอ
           </button>
         </div>
-        {ytError && (
-          <p className="font-body-sm text-body-sm text-error">{ytError}</p>
-        )}
+        {ytError && <p className="font-body-sm text-body-sm text-error">{ytError}</p>}
       </div>
 
       <p className="mt-2 font-body-sm text-body-sm text-on-surface-variant">

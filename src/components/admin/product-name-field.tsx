@@ -12,9 +12,13 @@ import { Icon } from "@/components/icon";
 export function ProductNameField({
   defaultValue,
   excludeId,
+  onValueChange,
+  modified,
 }: {
   defaultValue: string;
   excludeId?: string;
+  onValueChange?: (v: string) => void;
+  modified?: boolean;
 }) {
   const [value, setValue] = useState(defaultValue);
   const [taken, setTaken] = useState(false);
@@ -46,10 +50,12 @@ export function ProductNameField({
         name="name"
         required
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => { setValue(e.target.value); onValueChange?.(e.target.value); }}
         className={`rounded-lg border bg-white px-4 py-3 font-body-md text-body-md outline-none focus:ring-1 ${
           taken
             ? "border-error focus:border-error focus:ring-error/20"
+            : modified
+            ? "border-error/60 ring-1 ring-error/20 focus:border-error/60 focus:ring-error/20"
             : "border-outline-variant focus:border-primary focus:ring-primary/20"
         }`}
         placeholder="ชื่อสินค้าภาษาอังกฤษ"

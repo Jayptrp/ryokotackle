@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createCategory } from "@/app/admin/products/actions";
 import { Icon } from "@/components/icon";
 
@@ -23,9 +23,11 @@ const addBtnCls =
 export function CategorySelect({
   categories,
   defaultCategoryId,
+  onCategoryChange,
 }: {
   categories: CatOption[];
   defaultCategoryId: string | null;
+  onCategoryChange?: (id: string | null) => void;
 }) {
   const [cats, setCats] = useState(categories);
 
@@ -55,6 +57,11 @@ export function CategorySelect({
   );
 
   const categoryId = subId || topId;
+
+  // Notify parent whenever the effective category id changes.
+  const cbRef = useRef(onCategoryChange);
+  cbRef.current = onCategoryChange;
+  useEffect(() => { cbRef.current?.(categoryId || null); }, [categoryId]);
 
   function pickTop(id: string) {
     setTopId(id);

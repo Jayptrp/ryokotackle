@@ -220,6 +220,108 @@ export async function saveDescription(formData: FormData) {
   }
 }
 
+interface PendingMedia {
+  id: string; url: string; type: string; provider: string | null;
+  sortOrder: number; isPrimary: boolean; isNew?: boolean;
+}
+
+/**
+ * Single-round-trip save for ALL product data: core fields, media, channels,
+ * and description. Called from the ProductEditor client component.
+ */
+export async function saveProductAll(formData: FormData) {
+  const supabase = await createAdminClient();
+
+  const id = formData.get("id") as string | null;
+  const name = (formData.get("name") as string).trim();
+  const nameTh = (formData.get("name_th") as string)?.trim() || null;
+  const summary = (formData.get("summary") as string)?.trim() || null;
+  const description = (formData.get("description") as string) || null;
+  const categoryId = (formData.get("category_id") as string) || null;
+  const status = (formData.get("status") as string) || "draft";
+  const isFeatured = formData.getAll("is_featured").includes("true");
+
+  const mediaCurrent: PendingMedia[] = JSON.parse((formData.get("media_current") as string) || "[]");
+  const mediaDeleted: { id: string; url: string }[] = JSON.parse((formData.get("media_deleted") as string) || "[]");
+  const channels: { channel: string; url: string }[] = JSON.parse((formData.get("channels_json") as string) || "[]");
+
+  if (!name) return;
+
+  const isNew = !id;
+
+  if (await isProductNameTaken(name, id ?? undefined)) {
+    redirect(
+      isNew ? "/admin/products/new?error=duplicate-name" : `/admin/products/${id}?error=duplicate-name`,
+    );
+  }
+
+  const slug = await ensureUniqueSlug(supabase, name, id ?? undefined);
+
+  const payload = {
+    name, name_th: nameTh, summary, description,
+    category_id: categoryId || null,
+    status: status as never,
+    is_featured: isFeatured,
+    slug,
+  };
+
+  let productId = id;
+  if (isNew) {
+    const { data, error } = await supabase.from("products").insert(payload).select("id, slug").single();
+    if (error) throw error;
+    productId = data.id;
+  } else {
+    const { error } = await supabase.from("products").update(payload).eq("id", id!);
+    if (error) throw error;
+  }
+
+  // Delete removed media (storage + DB row)
+  for (const item of mediaDeleted) {
+    try {
+      const url = new URL(item.url);
+      const m = url.pathname.match(/\/storage\/v1\/object\/public\/product-media\/(.+)$/);
+      if (m) await supabase.storage.from("product-media").remove([m[1]]);
+    } catch { /* non-storage URL, skip */ }
+    await supabase.from("product_media").delete().eq("id", item.id);
+  }
+
+  // Insert newly uploaded media
+  for (const item of mediaCurrent.filter((m) => m.isNew)) {
+    await supabase.from("product_media").insert({
+      product_id: productId!,
+      url: item.url,
+      type: item.type as never,
+      provider: (item.provider as never) ?? null,
+      sort_order: item.sortOrder,
+      is_primary: item.isPrimary,
+      alt: null,
+    });
+  }
+
+  // Update sort_order + is_primary for existing media
+  for (const item of mediaCurrent.filter((m) => !m.isNew)) {
+    await supabase.from("product_media")
+      .update({ sort_order: item.sortOrder, is_primary: item.isPrimary })
+      .eq("id", item.id);
+  }
+
+  // Save channels (delete-all + re-insert)
+  if (!isNew) {
+    await supabase.from("product_channels").delete().eq("product_id", productId!);
+    const channelRows = channels
+      .filter((c) => c.channel && c.url)
+      .map((c, i) => ({ product_id: productId!, channel: c.channel as never, url: c.url, sort_order: i }));
+    if (channelRows.length) await supabase.from("product_channels").insert(channelRows);
+  }
+
+  revalidatePath("/products");
+  revalidatePath(`/products/${slug}`);
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  redirect(isNew ? `/admin/products/${productId}` : `/admin/products/${id}`);
+}
+
 /** Delete a product entirely. */
 export async function deleteProduct(id: string) {
   const supabase = await createAdminClient();

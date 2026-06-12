@@ -29,7 +29,8 @@ const CONTENT_CLASS = [
 interface TiptapEditorProps {
   name: string;
   defaultValue?: string | null;
-  productId?: string; // for inline image upload
+  productId?: string;
+  onUpdate?: (html: string) => void;
 }
 
 function ToolBtn({
@@ -63,7 +64,7 @@ function ToolBtn({
   );
 }
 
-export function TiptapEditor({ name, defaultValue, productId }: TiptapEditorProps) {
+export function TiptapEditor({ name, defaultValue, productId, onUpdate }: TiptapEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -111,10 +112,13 @@ export function TiptapEditor({ name, defaultValue, productId }: TiptapEditorProp
     if (!editor) return;
     const rerender = () => setTick((t) => t + 1);
     editor.on("transaction", rerender);
-    return () => {
-      editor.off("transaction", rerender);
-    };
-  }, [editor]);
+    if (onUpdate) {
+      const handler = () => onUpdate(editor.getHTML());
+      editor.on("update", handler);
+      return () => { editor.off("transaction", rerender); editor.off("update", handler); };
+    }
+    return () => { editor.off("transaction", rerender); };
+  }, [editor, onUpdate]);
 
   if (!editor) return null;
 
