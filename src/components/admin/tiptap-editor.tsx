@@ -96,7 +96,11 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
             const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
             if (res.ok) {
               const { url } = await res.json();
-              editor?.chain().focus().setImage({ src: url }).run();
+              setTimeout(() => {
+                if (editor && !editor.isDestroyed) {
+                  editor.chain().focus().setImage({ src: url }).run();
+                }
+              }, 0);
             }
           });
           return true; // prevent default paste
@@ -111,6 +115,12 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
 
         if (files.length > 0 && productId) {
           event.preventDefault();
+          event.stopPropagation();
+
+          // Try to get drop position
+          const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          const pos = coordinates?.pos ?? view.state.selection.from;
+
           files.forEach(async (file) => {
             const formData = new FormData();
             formData.set("file", file);
@@ -119,7 +129,11 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
             const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
             if (res.ok) {
               const { url } = await res.json();
-              editor?.chain().focus().setImage({ src: url }).run();
+              setTimeout(() => {
+                if (editor && !editor.isDestroyed) {
+                  editor.chain().focus().insertContentAt(pos, { type: "image", attrs: { src: url } }).run();
+                }
+              }, 0);
             }
           });
           return true;
