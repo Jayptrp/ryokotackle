@@ -35,14 +35,14 @@ function reindex(items: PendingMedia[]): PendingMedia[] {
 
 export function MediaManager({ productId, items, onItemsChange }: Props) {
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [ytUrl, setYtUrl] = useState("");
   const [ytError, setYtError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const visible = items.filter((m) => !m.isDeleted);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+  async function uploadFiles(files: File[]) {
     if (!files.length) return;
     setUploading(true);
     let next = [...items];
@@ -74,6 +74,31 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
     onItemsChange(next);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    uploadFiles(files);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    uploadFiles(files);
   }
 
   function handleAddYouTube() {
@@ -179,15 +204,31 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 disabled={uploading}
-                className="flex h-28 w-28 flex-none flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-outline-variant bg-surface-container transition-colors hover:border-primary hover:bg-surface-container-low"
+                className={`flex h-28 w-28 flex-none flex-col items-center justify-center gap-1 rounded-lg border border-dashed transition-colors ${
+                  isDragging
+                    ? "border-primary bg-primary/5"
+                    : "border-outline-variant bg-surface-container hover:border-primary hover:bg-surface-container-low"
+                }`}
               >
                 {uploading ? (
                   <Icon name="hourglass_top" className="animate-spin text-2xl text-secondary" />
                 ) : (
                   <>
-                    <Icon name="add_photo_alternate" className="text-2xl text-on-surface-variant" />
-                    <span className="font-label-caps text-label-caps text-on-surface-variant">อัปโหลด</span>
+                    <Icon
+                      name={isDragging ? "upload" : "add_photo_alternate"}
+                      className={`text-2xl ${isDragging ? "text-primary" : "text-on-surface-variant"}`}
+                    />
+                    <span
+                      className={`font-label-caps text-label-caps ${
+                        isDragging ? "text-primary" : "text-on-surface-variant"
+                      }`}
+                    >
+                      {isDragging ? "วางเพื่ออัปโหลด" : "อัปโหลด"}
+                    </span>
                   </>
                 )}
               </button>
