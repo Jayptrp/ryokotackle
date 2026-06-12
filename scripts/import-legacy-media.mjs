@@ -70,53 +70,62 @@ const { data: prods, error } = await sb.from("products").select("id, slug").in("
 if (error) throw error;
 const idBySlug = new Map(prods.map((p) => [p.slug, p.id]));
 
+// Group folders by target product — multiple legacy pages can map to one product
+// and their media is MERGED into a single carousel (in CSV order).
+const groups = new Map();
+for (const r of review) {
+  const s = r.db_slug.trim();
+  if (!groups.has(s)) groups.set(s, []);
+  groups.get(s).push(r);
+}
+
 let okCount = 0, imgCount = 0, vidCount = 0, skipped = 0;
 
-for (const r of review) {
-  const pid = idBySlug.get(r.db_slug.trim());
-  if (!pid) { console.log(`  ! no product for db_slug=${r.db_slug}`); continue; }
+for (const [dbSlug, grpRows] of groups) {
+  const pid = idBySlug.get(dbSlug);
+  if (!pid) { console.log(`  ! no product for db_slug=${dbSlug}`); continue; }
 
   // existing media guard
   const { count } = await sb.from("product_media").select("id", { count: "exact", head: true }).eq("product_id", pid);
-  if (count && !REPLACE) { console.log(`  ~ skip ${r.db_slug} (already has ${count} media; use --replace)`); skipped++; continue; }
-
-  const meta = JSON.parse(readFileSync(join(SCRAPE, r.scrape_slug, "meta.json"), "utf8"));
-  const images = (meta.images || []).filter((i) => i.file);
-  const videos = meta.videos || [];
-
+  if (count && !REPLACE) { console.log(`  ~ skip ${dbSlug} (already has ${count} media; use --replace)`); skipped++; continue; }
   if (COMMIT && REPLACE && count) await sb.from("product_media").delete().eq("product_id", pid);
 
   const rows = [];
-  let order = 0;
-  for (const img of images) {
-    const file = join(SCRAPE, r.scrape_slug, img.file);
-    if (!existsSync(file)) continue;
-    const fname = basename(img.file);
-    const path = `${pid}/legacy/${fname}`;
-    let publicUrl = `${url}/storage/v1/object/public/${BUCKET}/${path}`;
-    if (COMMIT) {
-      const buf = readFileSync(file);
-      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, buf, {
-        contentType: CT[extname(fname).toLowerCase()] || "application/octet-stream", upsert: true,
-      });
-      if (upErr) { console.log(`    upload fail ${path}: ${upErr.message}`); continue; }
-      publicUrl = sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  let order = 0, primarySet = false, gi = 0, gv = 0;
+  for (const r of grpRows) {
+    const meta = JSON.parse(readFileSync(join(SCRAPE, r.scrape_slug, "meta.json"), "utf8"));
+    for (const img of (meta.images || []).filter((i) => i.file)) {
+      const file = join(SCRAPE, r.scrape_slug, img.file);
+      if (!existsSync(file)) continue;
+      const fname = basename(img.file);
+      const path = `${pid}/legacy/${r.scrape_slug}/${fname}`;
+      let publicUrl = `${url}/storage/v1/object/public/${BUCKET}/${path}`;
+      if (COMMIT) {
+        const { error: upErr } = await sb.storage.from(BUCKET).upload(path, readFileSync(file), {
+          contentType: CT[extname(fname).toLowerCase()] || "application/octet-stream", upsert: true,
+        });
+        if (upErr) { console.log(`    upload fail ${path}: ${upErr.message}`); continue; }
+        publicUrl = sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      }
+      const isPrimary = !primarySet;
+      primarySet = true;
+      rows.push({ product_id: pid, type: "image", provider: null, url: publicUrl, alt: null, sort_order: order++, is_primary: isPrimary });
+      gi++; imgCount++;
     }
-    rows.push({ product_id: pid, type: "image", provider: null, url: publicUrl, alt: null, sort_order: order, is_primary: order === 0 });
-    order++; imgCount++;
-  }
-  for (const v of videos) {
-    rows.push({ product_id: pid, type: "video", provider: "youtube", url: v.url, alt: null, sort_order: order, is_primary: false });
-    order++; vidCount++;
+    for (const v of meta.videos || []) {
+      rows.push({ product_id: pid, type: "video", provider: "youtube", url: v.url, alt: null, sort_order: order++, is_primary: false });
+      gv++; vidCount++;
+    }
   }
 
   if (COMMIT && rows.length) {
     const { error: insErr } = await sb.from("product_media").insert(rows);
-    if (insErr) { console.log(`  ! insert fail ${r.db_slug}: ${insErr.message}`); continue; }
+    if (insErr) { console.log(`  ! insert fail ${dbSlug}: ${insErr.message}`); continue; }
   }
   okCount++;
-  console.log(`  ${COMMIT ? "✓" : "·"} ${r.db_slug}: ${images.length} imgs, ${videos.length} vids`);
+  const from = grpRows.length > 1 ? ` (merged ${grpRows.length} folders)` : "";
+  console.log(`  ${COMMIT ? "✓" : "·"} ${dbSlug}: ${gi} imgs, ${gv} vids${from}`);
 }
 
-console.log(`\n${COMMIT ? "Imported" : "Would import"}: ${okCount} products, ${imgCount} images, ${vidCount} videos. Skipped: ${skipped}.`);
+console.log(`\n${COMMIT ? "Imported" : "Would import"}: ${okCount} products, ${imgCount} images, ${vidCount} videos. Skipped (already had media): ${skipped}.`);
 if (!COMMIT) console.log("Re-run with --commit to write. Test one first: --slug <scrape_slug> --commit");

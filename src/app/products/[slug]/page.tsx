@@ -5,6 +5,7 @@ import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { ProductGallery } from "@/components/product-gallery";
 import { RichContent } from "@/components/rich-content";
+import { ScrollToButton } from "@/components/scroll-to-button";
 import { JsonLd } from "@/components/json-ld";
 import { CHANNEL_META } from "@/lib/channels";
 import { getProductBySlug, getPublishedSlugs } from "@/lib/queries";
@@ -36,15 +37,8 @@ export async function generateMetadata({
     return { title: "ไม่พบสินค้า", robots: { index: false, follow: false } };
   }
 
-  // Title: "{Brand} {Name} | {Category}" — keyword-rich but concise.
-  // Most legacy product names already lead with the brand, so only prepend it
-  // when it isn't already present to avoid "RYOKO RYOKO …".
-  const brandName = product.brand?.name;
-  const nameHasBrand =
-    brandName &&
-    product.name.toLowerCase().startsWith(brandName.toLowerCase());
+  // Title: "{Name} | {Category}" — keyword-rich but concise.
   const titleParts = [
-    nameHasBrand ? "" : brandName,
     product.name,
     product.category ? `| ${product.category.nameTh ?? product.category.name}` : "",
   ].filter(Boolean);
@@ -55,7 +49,7 @@ export async function generateMetadata({
   const description =
     product.summary?.trim() ||
     (product.description ? toMetaDescription(product.description) : "") ||
-    `${product.name}${product.brand ? ` โดย ${product.brand.name}` : ""} — ${
+    `${product.name} — ${
       product.category?.nameTh ?? product.category?.name ?? "อุปกรณ์ตกปลา"
     } คุณภาพสูงจาก ${SITE_NAME}`;
 
@@ -67,7 +61,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    keywords: [product.name, product.brand?.name, product.category?.name, product.nameTh]
+    keywords: [product.name, product.category?.name, product.nameTh]
       .filter(Boolean)
       .join(", "),
     alternates: { canonical },
@@ -96,7 +90,7 @@ export default async function ProductDetailPage({
   const product = await getProductBySlug(slug);
   if (!product || product.status !== "published") notFound();
 
-  const { category, brand } = product;
+  const { category } = product;
 
   const productImages = product.media
     .filter((m) => m.type === "image")
@@ -113,7 +107,6 @@ export default async function ProductDetailPage({
       : {}),
     ...(productImages.length ? { image: productImages } : {}),
     ...(product.summary ? { description: product.summary } : {}),
-    ...(brand ? { brand: { "@type": "Brand", name: brand.name } } : {}),
     ...(category
       ? { category: category.nameTh ?? category.name }
       : {}),
@@ -172,14 +165,6 @@ export default async function ProductDetailPage({
         <div className="flex flex-col gap-stack-lg md:col-span-5">
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              {brand && (
-                <Link
-                  href={`/products?brand=${brand.slug}`}
-                  className="rounded-full bg-surface-container px-3 py-1 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:text-primary"
-                >
-                  {brand.name}
-                </Link>
-              )}
               {category && (
                 <Link
                   href={`/category/${category.slug}`}
@@ -246,12 +231,19 @@ export default async function ProductDetailPage({
               </Link>
             </div>
           )}
+
+          {product.description && (
+            <ScrollToButton targetId="product-detail" label="ดูรายละเอียด" />
+          )}
         </div>
       </div>
 
       {/* Full detail */}
       {product.description && (
-        <div className="mt-section-gap border-t border-outline-variant pt-section-gap">
+        <div
+          id="product-detail"
+          className="mt-section-gap scroll-mt-24 border-t border-outline-variant pt-section-gap"
+        >
           <div className="mx-auto max-w-4xl">
             <h2 className="mb-stack-md flex items-center gap-2 font-headline-md text-headline-md text-primary">
               <span className="h-1 w-8 rounded-full bg-secondary" />

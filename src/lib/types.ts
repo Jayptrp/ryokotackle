@@ -5,12 +5,6 @@ export type MediaType = Database["public"]["Enums"]["media_type"];
 export type MediaProvider = Database["public"]["Enums"]["media_provider"];
 export type SalesChannel = Database["public"]["Enums"]["sales_channel"];
 
-export interface Brand {
-  id: string;
-  slug: string;
-  name: string;
-}
-
 export interface Category {
   id: string;
   slug: string;
@@ -19,7 +13,34 @@ export interface Category {
   parentSlug: string | null;
   icon: string | null;
   sortOrder: number;
+  /** Admin-uploaded background image for the homepage category card. */
+  imageUrl: string | null;
+  /** Product whose primary image backs the card when no image is uploaded. */
+  imageProductId: string | null;
   children?: Category[];
+}
+
+/** Top-level category enriched with a resolved homepage card background. */
+export interface CategoryCard {
+  slug: string;
+  name: string;
+  nameTh: string | null;
+  icon: string | null;
+  /** Resolved background: uploaded → selected product → auto-picked product. */
+  backgroundImage: string | null;
+}
+
+/** Editable hero carousel slide (uploaded image, or backed by a product). */
+export interface CarouselSlide {
+  id: string;
+  /** Resolved image: the product's primary image, or the uploaded image_url. */
+  imageUrl: string;
+  /** Resolved title: the product name (locked) for product slides, else editable. */
+  title: string | null;
+  subtitle: string | null;
+  sortOrder: number;
+  /** Non-null when the slide is backed by a product (title is locked). */
+  productId: string | null;
 }
 
 export interface ProductMedia {
@@ -47,7 +68,6 @@ export interface ProductListItem {
   nameTh: string | null;
   summary: string | null;
   status: ProductStatus;
-  brand: Pick<Brand, "slug" | "name"> | null;
   category: Pick<Category, "slug" | "name" | "nameTh"> | null;
   primaryImage: string | null;
   createdAt: string;
@@ -63,7 +83,6 @@ export interface Product {
   description: string | null;
   status: ProductStatus;
   isFeatured: boolean;
-  brand: Brand | null;
   category: Category | null;
   media: ProductMedia[];
   channels: ProductChannel[];
@@ -71,7 +90,7 @@ export interface Product {
 
 export interface ProductQuery {
   category?: string;
-  brand?: string;
+  subcategory?: string;
   q?: string;
   sort?: "name" | "newest";
   page?: number;

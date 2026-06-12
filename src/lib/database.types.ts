@@ -50,11 +50,54 @@ export type Database = {
         }
         Relationships: []
       }
+      carousel_slides: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          product_id: string | null
+          sort_order: number
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          product_id?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          product_id?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carousel_slides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
           icon: string | null
           id: string
+          image_product_id: string | null
+          image_url: string | null
           name: string
           name_th: string | null
           parent_id: string | null
@@ -65,6 +108,8 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          image_product_id?: string | null
+          image_url?: string | null
           name: string
           name_th?: string | null
           parent_id?: string | null
@@ -75,6 +120,8 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          image_product_id?: string | null
+          image_url?: string | null
           name?: string
           name_th?: string | null
           parent_id?: string | null
@@ -83,6 +130,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "categories_image_product_id_fkey"
+            columns: ["image_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "categories_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
@@ -90,6 +144,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pages: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          slug: string
+          status: Database["public"]["Enums"]["product_status"]
+          title: string
+          title_th: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          slug: string
+          status?: Database["public"]["Enums"]["product_status"]
+          title: string
+          title_th?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          slug?: string
+          status?: Database["public"]["Enums"]["product_status"]
+          title?: string
+          title_th?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       product_channels: {
         Row: {

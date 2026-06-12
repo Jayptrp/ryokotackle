@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
       // Admin-uploaded product media (Supabase Storage, product-media bucket).
       { protocol: "https", hostname: "*.supabase.co" },
+      // YouTube video thumbnails (admin media manager + any YT-backed media).
+      { protocol: "https", hostname: "img.youtube.com" },
     ],
   },
 };

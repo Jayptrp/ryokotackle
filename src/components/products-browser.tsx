@@ -4,14 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
 import { ProductCard } from "@/components/product-card";
-import type { Brand, Category, ProductListItem } from "@/lib/types";
+import type { Category, ProductListItem } from "@/lib/types";
 
 const PAGE_SIZE = 24;
 
 /**
  * Loads-once, filters-in-browser catalog browser.
  *
- * The full published product set is passed in as a prop; category / brand /
+ * The full published product set is passed in as a prop; category / subcategory /
  * search / sort / pagination all run client-side with no server round-trip,
  * so rapid filter clicks never hit the Worker. The active filters are mirrored
  * into the URL via history.replaceState (shallow) so links stay shareable
@@ -20,13 +20,11 @@ const PAGE_SIZE = 24;
 export function ProductsBrowser({
   products,
   categories,
-  brands,
   lockCategory,
   basePath = "/products",
 }: {
   products: ProductListItem[];
   categories: Category[]; // flat, with parentSlug
-  brands: Brand[];
   /** When set, the category chip row is hidden and results stay within it. */
   lockCategory?: string;
   basePath?: string;
@@ -34,7 +32,7 @@ export function ProductsBrowser({
   // Defaults render on the server (static HTML keeps the full grid for SEO).
   // Any deep-link filters in the URL are applied on the client after mount.
   const [category, setCategory] = useState(lockCategory ?? "all");
-  const [brand, setBrand] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"name" | "newest">("name");
   const [page, setPage] = useState(1);
@@ -43,7 +41,7 @@ export function ProductsBrowser({
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     if (!lockCategory && p.get("category")) setCategory(p.get("category")!);
-    if (p.get("brand")) setBrand(p.get("brand")!);
+    if (p.get("subcategory")) setSubcategory(p.get("subcategory")!);
     if (p.get("q")) setQ(p.get("q")!);
     if (p.get("sort") === "newest") setSort("newest");
     const pg = Number(p.get("page"));
@@ -65,8 +63,8 @@ export function ProductsBrowser({
     [categories],
   );
 
-  // Products in the active category only (ignoring brand/search) — used to
-  // derive which brands are actually available to filter by.
+  // Products in the active category only (ignoring subcategory/search) — used to
+  // derive which subcategories are actually available to filter by.
   const categoryProducts = useMemo(() => {
     if (lockCategory) {
       const set = descendantSlugs(lockCategory);
@@ -77,15 +75,26 @@ export function ProductsBrowser({
     return products.filter((p) => p.category && set.has(p.category.slug));
   }, [products, category, lockCategory, descendantSlugs]);
 
-  const availableBrands = useMemo(() => {
-    const slugs = new Set(categoryProducts.map((p) => p.brand?.slug).filter(Boolean));
-    return brands.filter((b) => slugs.has(b.slug));
-  }, [categoryProducts, brands]);
+  // Subcategories (categories with a parent) that actually have products in the
+  // current category scope. When a top category is active, restrict to its children.
+  const availableSubcategories = useMemo(() => {
+    const slugsWithProducts = new Set(
+      categoryProducts.map((p) => p.category?.slug).filter(Boolean),
+    );
+    const activeTop = lockCategory ?? (category !== "all" ? category : null);
+    return categories.filter(
+      (c) =>
+        c.parentSlug &&
+        slugsWithProducts.has(c.slug) &&
+        (!activeTop || c.parentSlug === activeTop),
+    );
+  }, [categoryProducts, categories, category, lockCategory]);
 
-  // Drop the brand filter if it isn't available in the chosen category.
+  // Drop the subcategory filter if it isn't available in the chosen category.
   useEffect(() => {
-    if (brand && !availableBrands.some((b) => b.slug === brand)) setBrand("");
-  }, [availableBrands, brand]);
+    if (subcategory && !availableSubcategories.some((c) => c.slug === subcategory))
+      setSubcategory("");
+  }, [availableSubcategories, subcategory]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -93,7 +102,7 @@ export function ProductsBrowser({
       const set = descendantSlugs(category);
       list = list.filter((p) => p.category && set.has(p.category.slug));
     }
-    if (brand) list = list.filter((p) => p.brand?.slug === brand);
+    if (subcategory) list = list.filter((p) => p.category?.slug === subcategory);
     const term = q.trim().toLowerCase();
     if (term) {
       list = list.filter(
@@ -108,7 +117,7 @@ export function ProductsBrowser({
         : a.name.localeCompare(b.name),
     );
     return sorted;
-  }, [products, category, brand, q, sort, lockCategory, descendantSlugs]);
+  }, [products, category, subcategory, q, sort, lockCategory, descendantSlugs]);
 
   // Mirror state into the URL without navigating (keeps links shareable).
   // Gated on `ready` so it doesn't strip deep-link params before they're read.
@@ -117,13 +126,13 @@ export function ProductsBrowser({
     const params = new URLSearchParams();
     if (!lockCategory && category && category !== "all")
       params.set("category", category);
-    if (brand) params.set("brand", brand);
+    if (subcategory) params.set("subcategory", subcategory);
     if (q.trim()) params.set("q", q.trim());
     if (sort === "newest") params.set("sort", "newest");
     if (page > 1) params.set("page", String(page));
     const qs = params.toString();
     window.history.replaceState(null, "", qs ? `${basePath}?${qs}` : basePath);
-  }, [ready, category, brand, q, sort, page, lockCategory, basePath]);
+  }, [ready, category, subcategory, q, sort, page, lockCategory, basePath]);
 
   // Filter changes reset to page 1 (page changes themselves must not).
   // Clicking the active category again clears it back to "all".
@@ -131,8 +140,8 @@ export function ProductsBrowser({
     setCategory((cur) => (cur === v ? "all" : v));
     setPage(1);
   };
-  const pickBrand = (v: string) => {
-    setBrand(v);
+  const pickSubcategory = (v: string) => {
+    setSubcategory(v);
     setPage(1);
   };
   const pickQuery = (v: string) => {
@@ -180,14 +189,15 @@ export function ProductsBrowser({
         <div className="flex flex-col gap-stack-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-xs">
             <select
-              value={brand}
-              onChange={(e) => pickBrand(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
+              value={subcategory}
+              onChange={(e) => pickSubcategory(e.target.value)}
+              disabled={availableSubcategories.length === 0}
+              className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary disabled:opacity-50"
             >
-              <option value="">ทุกแบรนด์ (All brands)</option>
-              {availableBrands.map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
+              <option value="">ทุกหมวดหมู่ย่อย</option>
+              {availableSubcategories.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.nameTh ?? c.name}
                 </option>
               ))}
             </select>

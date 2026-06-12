@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local co-worker setup scripts (contain the publishable key — keep out of the repo)
+/setup-env.cmd
+/start.cmd
+
 # cloudflare / opennext
 /.open-next/
 /.wrangler/

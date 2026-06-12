@@ -13,7 +13,7 @@ function slugify(str: string) {
 }
 
 async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminClient>>, base: string, excludeId?: string) {
-  let slug = slugify(base);
+  const slug = slugify(base);
   let attempt = 0;
   while (true) {
     const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
@@ -25,6 +25,27 @@ async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminC
   }
 }
 
+/**
+ * Whether a product with this name already exists (case-insensitive, EN or TH),
+ * excluding the given product id. Used for the live check in the editor and as a
+ * server-side guard in saveProduct.
+ */
+export async function isProductNameTaken(
+  name: string,
+  excludeId?: string,
+): Promise<boolean> {
+  const clean = name.trim().toLowerCase();
+  if (!clean) return false;
+  const supabase = await createAdminClient();
+  const { data } = await supabase.from("products").select("id, name, name_th");
+  return (data ?? []).some(
+    (p) =>
+      p.id !== excludeId &&
+      (p.name?.trim().toLowerCase() === clean ||
+        p.name_th?.trim().toLowerCase() === clean),
+  );
+}
+
 /** Create or update a product's core fields. */
 export async function saveProduct(formData: FormData) {
   const supabase = await createAdminClient();
@@ -34,7 +55,6 @@ export async function saveProduct(formData: FormData) {
   const nameTh = (formData.get("name_th") as string)?.trim() || null;
   const summary = (formData.get("summary") as string)?.trim() || null;
   const description = (formData.get("description") as string) || null;
-  const brandId = (formData.get("brand_id") as string) || null;
   const categoryId = (formData.get("category_id") as string) || null;
   const status = (formData.get("status") as string) || "draft";
   const isFeatured = formData.get("is_featured") === "true";
@@ -42,6 +62,16 @@ export async function saveProduct(formData: FormData) {
   if (!name) return;
 
   const isNew = !id;
+
+  // Reject a duplicate product name (case-insensitive, excluding this product).
+  if (await isProductNameTaken(name, id ?? undefined)) {
+    redirect(
+      isNew
+        ? "/admin/products/new?error=duplicate-name"
+        : `/admin/products/${id}?error=duplicate-name`,
+    );
+  }
+
   const slug = await ensureUniqueSlug(supabase, name, id ?? undefined);
 
   const payload = {
@@ -49,7 +79,6 @@ export async function saveProduct(formData: FormData) {
     name_th: nameTh,
     summary,
     description,
-    brand_id: brandId || null,
     category_id: categoryId || null,
     status: status as never,
     is_featured: isFeatured,
@@ -191,6 +220,108 @@ export async function saveDescription(formData: FormData) {
   }
 }
 
+interface PendingMedia {
+  id: string; url: string; type: string; provider: string | null;
+  sortOrder: number; isPrimary: boolean; isNew?: boolean;
+}
+
+/**
+ * Single-round-trip save for ALL product data: core fields, media, channels,
+ * and description. Called from the ProductEditor client component.
+ */
+export async function saveProductAll(formData: FormData) {
+  const supabase = await createAdminClient();
+
+  const id = formData.get("id") as string | null;
+  const name = (formData.get("name") as string).trim();
+  const nameTh = (formData.get("name_th") as string)?.trim() || null;
+  const summary = (formData.get("summary") as string)?.trim() || null;
+  const description = (formData.get("description") as string) || null;
+  const categoryId = (formData.get("category_id") as string) || null;
+  const status = (formData.get("status") as string) || "draft";
+  const isFeatured = formData.getAll("is_featured").includes("true");
+
+  const mediaCurrent: PendingMedia[] = JSON.parse((formData.get("media_current") as string) || "[]");
+  const mediaDeleted: { id: string; url: string }[] = JSON.parse((formData.get("media_deleted") as string) || "[]");
+  const channels: { channel: string; url: string }[] = JSON.parse((formData.get("channels_json") as string) || "[]");
+
+  if (!name) return;
+
+  const isNew = !id;
+
+  if (await isProductNameTaken(name, id ?? undefined)) {
+    redirect(
+      isNew ? "/admin/products/new?error=duplicate-name" : `/admin/products/${id}?error=duplicate-name`,
+    );
+  }
+
+  const slug = await ensureUniqueSlug(supabase, name, id ?? undefined);
+
+  const payload = {
+    name, name_th: nameTh, summary, description,
+    category_id: categoryId || null,
+    status: status as never,
+    is_featured: isFeatured,
+    slug,
+  };
+
+  let productId = id;
+  if (isNew) {
+    const { data, error } = await supabase.from("products").insert(payload).select("id, slug").single();
+    if (error) throw error;
+    productId = data.id;
+  } else {
+    const { error } = await supabase.from("products").update(payload).eq("id", id!);
+    if (error) throw error;
+  }
+
+  // Delete removed media (storage + DB row)
+  for (const item of mediaDeleted) {
+    try {
+      const url = new URL(item.url);
+      const m = url.pathname.match(/\/storage\/v1\/object\/public\/product-media\/(.+)$/);
+      if (m) await supabase.storage.from("product-media").remove([m[1]]);
+    } catch { /* non-storage URL, skip */ }
+    await supabase.from("product_media").delete().eq("id", item.id);
+  }
+
+  // Insert newly uploaded media
+  for (const item of mediaCurrent.filter((m) => m.isNew)) {
+    await supabase.from("product_media").insert({
+      product_id: productId!,
+      url: item.url,
+      type: item.type as never,
+      provider: (item.provider as never) ?? null,
+      sort_order: item.sortOrder,
+      is_primary: item.isPrimary,
+      alt: null,
+    });
+  }
+
+  // Update sort_order + is_primary for existing media
+  for (const item of mediaCurrent.filter((m) => !m.isNew)) {
+    await supabase.from("product_media")
+      .update({ sort_order: item.sortOrder, is_primary: item.isPrimary })
+      .eq("id", item.id);
+  }
+
+  // Save channels (delete-all + re-insert)
+  if (!isNew) {
+    await supabase.from("product_channels").delete().eq("product_id", productId!);
+    const channelRows = channels
+      .filter((c) => c.channel && c.url)
+      .map((c, i) => ({ product_id: productId!, channel: c.channel as never, url: c.url, sort_order: i }));
+    if (channelRows.length) await supabase.from("product_channels").insert(channelRows);
+  }
+
+  revalidatePath("/products");
+  revalidatePath(`/products/${slug}`);
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  redirect(isNew ? `/admin/products/${productId}` : `/admin/products/${id}`);
+}
+
 /** Delete a product entirely. */
 export async function deleteProduct(id: string) {
   const supabase = await createAdminClient();
@@ -206,4 +337,62 @@ export async function deleteProduct(id: string) {
   revalidatePath("/admin");
   if (data?.slug) revalidatePath(`/products/${data.slug}`);
   redirect("/admin");
+}
+
+/**
+ * Create a category (parentId = null) or subcategory (parentId set) on the fly
+ * from the product editor. Name is used for both EN and TH; slug is derived and
+ * de-duplicated. Returns the new row so the editor can select it immediately.
+ */
+export async function createCategory(
+  name: string,
+  parentId: string | null,
+): Promise<{ id: string; slug: string; name: string }> {
+  const supabase = await createAdminClient();
+  const clean = name.trim();
+  if (!clean) throw new Error("Category name is required");
+
+  // Unique slug among categories.
+  const base = slugify(clean) || "category";
+  let slug = base;
+  let attempt = 0;
+  while (true) {
+    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
+    const { data } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!data) {
+      slug = candidate;
+      break;
+    }
+    attempt++;
+  }
+
+  const { data: last } = await supabase
+    .from("categories")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      name: clean,
+      name_th: clean,
+      slug,
+      parent_id: parentId,
+      sort_order: (last?.sort_order ?? 0) + 10,
+    })
+    .select("id, slug, name")
+    .single();
+  if (error) throw error;
+
+  revalidatePath("/");
+  revalidatePath("/products");
+  revalidatePath("/admin");
+
+  return { id: data.id, slug: data.slug, name: data.name };
 }

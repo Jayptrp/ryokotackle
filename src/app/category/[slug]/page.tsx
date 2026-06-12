@@ -7,7 +7,6 @@ import { ProductsBrowser } from "@/components/products-browser";
 import { JsonLd } from "@/components/json-ld";
 import {
   getAllPublishedListItems,
-  getBrands,
   getCategories,
   getCategoryBySlug,
 } from "@/lib/queries";
@@ -54,8 +53,7 @@ export default async function CategoryPage({
   const category = await getCategoryBySlug(slug);
   if (!category) notFound();
 
-  const [brands, categories, allProducts] = await Promise.all([
-    getBrands(),
+  const [categories, allProducts] = await Promise.all([
     getCategories(),
     getAllPublishedListItems(),
   ]);
@@ -133,7 +131,6 @@ export default async function CategoryPage({
       <ProductsBrowser
         products={products}
         categories={categories}
-        brands={brands}
         lockCategory={slug}
         basePath={`/category/${slug}`}
       />

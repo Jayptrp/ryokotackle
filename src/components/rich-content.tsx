@@ -24,6 +24,8 @@ export function RichContent({
     allowedAttributes: {
       a: ["href", "target", "rel"],
       img: ["src", "alt", "width", "height"],
+      th: ["colspan", "rowspan"],
+      td: ["colspan", "rowspan"],
       "*": ["style"],
     },
     allowedSchemes: ["https", "http", "mailto"],
@@ -44,9 +46,9 @@ export function RichContent({
         "[&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1",
         "[&_a]:text-secondary [&_a]:underline",
         "[&_img]:my-4 [&_img]:rounded-lg [&_img]:border [&_img]:border-outline-variant",
-        "[&_table]:w-full [&_table]:my-4 [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-lg [&_table]:border [&_table]:border-outline-variant",
-        "[&_th]:bg-secondary [&_th]:text-on-secondary [&_th]:p-3 [&_th]:text-left [&_th]:font-label-caps [&_th]:text-label-caps",
-        "[&_td]:border-t [&_td]:border-outline-variant [&_td]:p-3",
+        "[&_table]:w-full [&_table]:my-4 [&_table]:border-collapse [&_table]:border-spacing-0 [&_table]:overflow-hidden [&_table]:rounded-lg [&_table]:border [&_table]:border-outline-variant",
+        "[&_th]:border [&_th]:border-outline-variant [&_th]:bg-secondary [&_th]:text-on-secondary [&_th]:p-3 [&_th]:text-left [&_th]:font-label-caps [&_th]:text-label-caps",
+        "[&_td]:border [&_td]:border-outline-variant [&_td]:p-3",
         className,
       )}
       dangerouslySetInnerHTML={{ __html: clean }}
