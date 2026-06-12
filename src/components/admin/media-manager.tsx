@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { Icon } from "@/components/icon";
+import { cn } from "@/lib/utils";
 import type { ProductMedia } from "@/lib/types";
 
 export interface PendingMedia extends ProductMedia {
@@ -35,7 +35,9 @@ function reindex(items: PendingMedia[]): PendingMedia[] {
 
 export function MediaManager({ productId, items, onItemsChange }: Props) {
   const [uploading, setUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ index: number; position: "before" | "after" } | null>(null);
   const [ytUrl, setYtUrl] = useState("");
   const [ytError, setYtError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -81,22 +83,77 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
     uploadFiles(files);
   }
 
+  // --- Native Drag and Drop (Internal Reordering) ---
+  
+  function onInternalDragStart(e: React.DragEvent, index: number) {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function onInternalDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    if (draggedIndex === null) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midpoint = rect.left + rect.width / 2;
+    const position = e.clientX < midpoint ? "before" : "after";
+
+    // Avoid showing indicator if it's the same as current position
+    if (index === draggedIndex || (position === "before" && index === draggedIndex + 1) || (position === "after" && index === draggedIndex - 1)) {
+      setDropTarget(null);
+    } else {
+      setDropTarget({ index, position });
+    }
+  }
+
+  function onInternalDrop(e: React.DragEvent) {
+    e.preventDefault();
+    if (draggedIndex === null || dropTarget === null) {
+      setDraggedIndex(null);
+      setDropTarget(null);
+      return;
+    }
+
+    const reordered = [...visible];
+    const [moved] = reordered.splice(draggedIndex, 1);
+    
+    // Adjust target index based on position and removal
+    let target = dropTarget.index;
+    if (dropTarget.position === "after") target += 1;
+    if (draggedIndex < target) target -= 1;
+
+    reordered.splice(target, 0, moved);
+    
+    const deleted = items.filter((m) => m.isDeleted);
+    onItemsChange(reindex([...reordered, ...deleted]));
+    
+    setDraggedIndex(null);
+    setDropTarget(null);
+  }
+
+  function onInternalDragEnd() {
+    setDraggedIndex(null);
+    setDropTarget(null);
+  }
+
+  // --- File Drag and Drop (External Upload) ---
+
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    setIsDraggingFile(true);
   }
 
   function handleDragLeave(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    setIsDraggingFile(false);
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    setIsDraggingFile(false);
     const files = Array.from(e.dataTransfer.files);
     uploadFiles(files);
   }
@@ -127,115 +184,120 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
     onItemsChange(reindex(items.map((m) => (m.id === item.id ? { ...m, isDeleted: true } : m))));
   }
 
-  function onDragEnd(result: DropResult) {
-    if (!result.destination) return;
-    const reordered = [...visible];
-    const [moved] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, moved);
-    const deleted = items.filter((m) => m.isDeleted);
-    onItemsChange(reindex([...reordered, ...deleted]));
-  }
-
   return (
     <div>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="media" direction="horizontal">
-          {(provided) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className="mb-3 flex flex-wrap gap-3"
-            >
-              {visible.map((item, index) => (
-                <Draggable key={item.id} draggableId={item.id} index={index}>
-                  {(drag) => (
-                    <div
-                      ref={drag.innerRef}
-                      {...drag.draggableProps}
-                      {...drag.dragHandleProps}
-                      className="group relative h-28 w-28 flex-none overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low"
-                    >
-                      {item.type === "image" ? (
-                        <Image src={item.url} alt={item.alt ?? ""} fill className="object-cover" unoptimized />
-                      ) : youTubeId(item.url) ? (
-                        <>
-                          <Image
-                            src={`https://img.youtube.com/vi/${youTubeId(item.url)}/mqdefault.jpg`}
-                            alt={item.alt ?? ""}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-                            <Icon name="smart_display" filled className="text-4xl text-white" />
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <Icon name="play_circle" className="text-4xl text-on-surface-variant" />
-                        </div>
-                      )}
-                      {item.isPrimary && (
-                        <span className="absolute left-1 top-1 rounded bg-primary px-1 font-label-caps text-label-caps text-on-primary">
-                          หลัก
-                        </span>
-                      )}
-                      {item.isNew && (
-                        <span className="absolute bottom-1 left-1 rounded bg-secondary px-1 font-label-caps text-label-caps text-on-secondary">
-                          ใหม่
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item)}
-                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-error opacity-0 transition-opacity group-hover:opacity-100"
-                      >
-                        <Icon name="close" className="text-sm" />
-                      </button>
-                      <div className="absolute bottom-1 right-1 flex h-5 w-5 cursor-grab items-center justify-center rounded bg-white/60 opacity-0 group-hover:opacity-100">
-                        <Icon name="drag_indicator" className="text-xs text-on-surface-variant" />
-                      </div>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
+      <div className="mb-3 flex flex-wrap gap-3">
+        {visible.map((item, index) => {
+          const isBeingDragged = draggedIndex === index;
+          const showBarBefore = dropTarget?.index === index && dropTarget.position === "before";
+          const showBarAfter = dropTarget?.index === index && dropTarget.position === "after";
 
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                disabled={uploading}
-                className={`flex h-28 w-28 flex-none flex-col items-center justify-center gap-1 rounded-lg border border-dashed transition-colors ${
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-outline-variant bg-surface-container hover:border-primary hover:bg-surface-container-low"
-                }`}
-              >
-                {uploading ? (
-                  <Icon name="hourglass_top" className="animate-spin text-2xl text-secondary" />
-                ) : (
+          return (
+            <div
+              key={item.id}
+              draggable
+              onDragStart={(e) => onInternalDragStart(e, index)}
+              onDragOver={(e) => onInternalDragOver(e, index)}
+              onDrop={onInternalDrop}
+              onDragEnd={onInternalDragEnd}
+              className="relative h-28 w-28 flex-none"
+            >
+              {/* Insertion Bar Indicator */}
+              {showBarBefore && (
+                <div className="absolute -left-[7px] top-0 bottom-0 z-30 w-1 rounded-full bg-primary animate-pulse" />
+              )}
+              {showBarAfter && (
+                <div className="absolute -right-[7px] top-0 bottom-0 z-30 w-1 rounded-full bg-primary animate-pulse" />
+              )}
+
+              <div className={cn(
+                "group relative h-full w-full overflow-hidden rounded-lg border transition-all duration-200",
+                isBeingDragged 
+                  ? "border-dashed border-outline-variant bg-surface-container opacity-40 grayscale" 
+                  : "border-outline-variant bg-surface-container-low shadow-sm hover:shadow-md hover:border-primary/50"
+              )}>
+                {item.type === "image" ? (
+                  <Image src={item.url} alt={item.alt ?? ""} fill className="object-cover" unoptimized />
+                ) : youTubeId(item.url) ? (
                   <>
-                    <Icon
-                      name={isDragging ? "upload" : "add_photo_alternate"}
-                      className={`text-2xl ${isDragging ? "text-primary" : "text-on-surface-variant"}`}
+                    <Image
+                      src={`https://img.youtube.com/vi/${youTubeId(item.url)}/mqdefault.jpg`}
+                      alt={item.alt ?? ""}
+                      fill
+                      className="object-cover"
+                      unoptimized
                     />
-                    <span
-                      className={`font-label-caps text-label-caps ${
-                        isDragging ? "text-primary" : "text-on-surface-variant"
-                      }`}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                      <Icon name="smart_display" filled className="text-4xl text-white" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <Icon name="play_circle" className="text-4xl text-on-surface-variant" />
+                  </div>
+                )}
+                
+                {!isBeingDragged && (
+                  <>
+                    {item.isPrimary && (
+                      <span className="absolute left-1 top-1 rounded bg-primary px-1 font-label-caps text-label-caps text-on-primary">
+                        หลัก
+                      </span>
+                    )}
+                    {item.isNew && (
+                      <span className="absolute bottom-1 left-1 rounded bg-secondary px-1 font-label-caps text-label-caps text-on-secondary">
+                        ใหม่
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item)}
+                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-error opacity-0 transition-opacity group-hover:opacity-100"
                     >
-                      {isDragging ? "วางเพื่ออัปโหลด" : "อัปโหลด"}
-                    </span>
+                      <Icon name="close" className="text-sm" />
+                    </button>
+                    <div className="absolute bottom-1 right-1 flex h-5 w-5 cursor-grab items-center justify-center rounded bg-white/60 opacity-0 group-hover:opacity-100">
+                      <Icon name="drag_indicator" className="text-xs text-on-surface-variant" />
+                    </div>
                   </>
                 )}
-              </button>
+              </div>
             </div>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          disabled={uploading}
+          className={`flex h-28 w-28 flex-none flex-col items-center justify-center gap-1 rounded-lg border border-dashed transition-colors ${
+            isDraggingFile
+              ? "border-primary bg-primary/5"
+              : "border-outline-variant bg-surface-container hover:border-primary hover:bg-surface-container-low"
+          }`}
+        >
+          {uploading ? (
+            <Icon name="hourglass_top" className="animate-spin text-2xl text-secondary" />
+          ) : (
+            <>
+              <Icon
+                name={isDraggingFile ? "upload" : "add_photo_alternate"}
+                className={`text-2xl ${isDraggingFile ? "text-primary" : "text-on-surface-variant"}`}
+              />
+              <span
+                className={`font-label-caps text-label-caps ${
+                  isDraggingFile ? "text-primary" : "text-on-surface-variant"
+                }`}
+              >
+                {isDraggingFile ? "วางเพื่ออัปโหลด" : "อัปโหลด"}
+              </span>
+            </>
           )}
-        </Droppable>
-      </DragDropContext>
+        </button>
+      </div>
 
       <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFileChange} />
 
