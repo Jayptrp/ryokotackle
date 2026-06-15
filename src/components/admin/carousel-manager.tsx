@@ -16,6 +16,7 @@ import {
   saveSlideTexts,
 } from "@/app/admin/home/actions";
 import { Icon } from "@/components/icon";
+import { compressImage } from "@/lib/compress-image";
 import type { CarouselSlide } from "@/lib/types";
 
 export interface ProductOption {
@@ -44,8 +45,9 @@ export function CarouselManager({
     if (!files.length) return;
     setUploading(true);
     for (const file of files) {
+      const upload = await compressImage(file);
       const fd = new FormData();
-      fd.set("file", file);
+      fd.set("file", upload);
       fd.set("productId", "home");
       fd.set("folder", "carousel");
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
