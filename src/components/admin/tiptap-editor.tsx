@@ -9,6 +9,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
+import { compressImage } from "@/lib/compress-image";
 import { ResizableImage } from "@/components/admin/resizable-image";
 
 // Tailwind preflight strips list/heading/table defaults and there is no
@@ -89,8 +90,9 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
 
         if (files.length > 0 && productId) {
           files.forEach(async (file) => {
+            const upload = await compressImage(file);
             const formData = new FormData();
-            formData.set("file", file);
+            formData.set("file", upload);
             formData.set("productId", productId);
             formData.set("folder", "inline");
             const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
@@ -122,8 +124,9 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
           const pos = coordinates?.pos ?? view.state.selection.from;
 
           files.forEach(async (file) => {
+            const upload = await compressImage(file);
             const formData = new FormData();
-            formData.set("file", file);
+            formData.set("file", upload);
             formData.set("productId", productId);
             formData.set("folder", "inline");
             const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
@@ -151,8 +154,9 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
+      const upload = await compressImage(file);
       const formData = new FormData();
-      formData.set("file", file);
+      formData.set("file", upload);
       formData.set("productId", productId);
       formData.set("folder", "inline");
       const res = await fetch("/api/admin/upload", { method: "POST", body: formData });

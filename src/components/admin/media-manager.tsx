@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
+import { compressImage } from "@/lib/compress-image";
 import type { ProductMedia } from "@/lib/types";
 
 export interface PendingMedia extends ProductMedia {
@@ -49,8 +50,9 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
     setUploading(true);
     let next = [...items];
     for (const file of files) {
+      const upload = await compressImage(file);
       const fd = new FormData();
-      fd.set("file", file);
+      fd.set("file", upload);
       fd.set("productId", productId);
       fd.set("folder", "media");
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
