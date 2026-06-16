@@ -34,7 +34,7 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
 
   return (
     <section
-      className="group relative h-[clamp(320px,55vh,520px)] w-full overflow-hidden rounded-2xl bg-primary-container"
+      className="group relative aspect-[3/1] w-full overflow-hidden rounded-2xl bg-primary-container"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -49,8 +49,8 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
               className="object-cover"
               unoptimized
             />
-            <div className="absolute inset-0 flex items-end bg-gradient-to-t from-primary/60 to-transparent pb-stack-lg">
-              <div className="mb-stack-lg w-full px-6 md:px-10">
+            <div className="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-primary/60 to-transparent pb-stack-sm md:pb-stack-lg">
+              <div className="mb-stack-sm w-full px-6 md:mb-stack-lg md:px-10">
                 {slide.title && (
                   <h2 className="max-w-xl font-headline-lg text-headline-lg text-on-primary">
                     {slide.title}
@@ -101,7 +101,7 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
       </button>
 
       {/* Dots */}
-      <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 gap-stack-sm">
+      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-stack-sm md:bottom-10">
         {slides.map((slide, i) => (
           <button
             key={slide.id}
