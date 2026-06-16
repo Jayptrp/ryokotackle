@@ -322,14 +322,28 @@ export async function saveProductAll(formData: FormData) {
   redirect(isNew ? `/admin/products/${productId}` : `/admin/products/${id}`);
 }
 
-/** Delete a product entirely. */
+/** Delete a product entirely, including its Storage files. */
 export async function deleteProduct(id: string) {
   const supabase = await createAdminClient();
   const { data } = await supabase
     .from("products")
-    .select("slug")
+    .select("slug, description, media:product_media(url)")
     .eq("id", id)
     .single();
+
+  // The FK cascade removes product_media/channels/carousel ROWS, but not the
+  // Storage objects — so gather every product-media path (gallery images plus
+  // inline images embedded in the description) and remove the files first,
+  // otherwise deleting a product silently orphans its images.
+  const paths = new Set<string>();
+  const collect = (s?: string | null) => {
+    if (!s) return;
+    for (const m of s.matchAll(/\/storage\/v1\/object\/public\/product-media\/([^"'\s)?]+)/g))
+      paths.add(m[1]);
+  };
+  for (const item of (data?.media ?? []) as { url: string | null }[]) collect(item.url);
+  collect(data?.description);
+  if (paths.size) await supabase.storage.from("product-media").remove([...paths]);
 
   await supabase.from("products").delete().eq("id", id);
 
