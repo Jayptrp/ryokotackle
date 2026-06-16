@@ -41,6 +41,10 @@ export interface CarouselSlide {
   sortOrder: number;
   /** Non-null when the slide is backed by a product (title is locked). */
   productId: string | null;
+  /** Product the slide links to when clicked (independent of image backing). */
+  linkProductId: string | null;
+  /** Slug of `linkProductId`'s product, for building the click-through href. */
+  linkProductSlug: string | null;
 }
 
 export interface ProductMedia {

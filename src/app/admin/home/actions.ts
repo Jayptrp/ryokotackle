@@ -27,7 +27,10 @@ export async function addSlide(imageUrl: string): Promise<string> {
   return data.id;
 }
 
-/** Append a slide backed by a product. Image + title come from the product. */
+/**
+ * Append a slide backed by a product. Image + title come from the product.
+ * The click-through link defaults to that same product.
+ */
 export async function addSlideFromProduct(productId: string): Promise<string> {
   const supabase = await createAdminClient();
 
@@ -40,7 +43,11 @@ export async function addSlideFromProduct(productId: string): Promise<string> {
 
   const { data, error } = await supabase
     .from("carousel_slides")
-    .insert({ product_id: productId, sort_order: (last?.sort_order ?? 0) + 10 })
+    .insert({
+      product_id: productId,
+      link_product_id: productId,
+      sort_order: (last?.sort_order ?? 0) + 10,
+    })
     .select("id")
     .single();
   if (error) throw error;
@@ -50,11 +57,17 @@ export async function addSlideFromProduct(productId: string): Promise<string> {
 }
 
 /**
- * Save the overlay text of every slide in one call. `title` is cleared for
- * product-backed slides (their title is the product name, resolved at read time).
+ * Save the overlay text + link of every slide in one call. `title` is cleared
+ * for product-backed slides (their title is the product name, resolved at read time).
  */
 export async function saveSlideTexts(
-  slides: { id: string; title: string | null; subtitle: string | null; productId: string | null }[],
+  slides: {
+    id: string;
+    title: string | null;
+    subtitle: string | null;
+    productId: string | null;
+    linkProductId: string | null;
+  }[],
 ) {
   const supabase = await createAdminClient();
   await Promise.all(
@@ -64,6 +77,7 @@ export async function saveSlideTexts(
         .update({
           title: s.productId ? null : s.title || null,
           subtitle: s.subtitle || null,
+          link_product_id: s.linkProductId || null,
         })
         .eq("id", s.id),
     ),

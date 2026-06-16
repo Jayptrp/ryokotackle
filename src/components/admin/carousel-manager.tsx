@@ -56,7 +56,16 @@ export function CarouselManager({
         const id = await addSlide(url);
         setSlides((prev) => [
           ...prev,
-          { id, imageUrl: url, title: null, subtitle: null, sortOrder: prev.length, productId: null },
+          {
+            id,
+            imageUrl: url,
+            title: null,
+            subtitle: null,
+            sortOrder: prev.length,
+            productId: null,
+            linkProductId: null,
+            linkProductSlug: null,
+          },
         ]);
       }
     }
@@ -77,6 +86,8 @@ export function CarouselManager({
         subtitle: "",
         sortOrder: prev.length,
         productId: product.id,
+        linkProductId: product.id,
+        linkProductSlug: null,
       },
     ]);
     setPickProduct("");
@@ -98,6 +109,13 @@ export function CarouselManager({
     setDirty(true);
   }
 
+  function handleLinkChange(id: string, linkProductId: string) {
+    setSlides((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, linkProductId: linkProductId || null } : s)),
+    );
+    setDirty(true);
+  }
+
   async function handleSaveAll() {
     setSaving(true);
     await saveSlideTexts(
@@ -106,6 +124,7 @@ export function CarouselManager({
         title: s.title,
         subtitle: s.subtitle,
         productId: s.productId,
+        linkProductId: s.linkProductId,
       })),
     );
     setSaving(false);
@@ -180,15 +199,15 @@ export function CarouselManager({
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-1 flex-col gap-2">
+                      <div className="flex min-w-0 flex-1 flex-col gap-2">
                         {slide.productId ? (
-                          <div className="flex flex-col gap-1">
+                          <div className="flex min-w-0 flex-col gap-1">
                             <span className="font-label-caps text-label-caps text-on-surface-variant">
                               หัวข้อ (ชื่อสินค้า — แก้ไขไม่ได้)
                             </span>
-                            <div className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container px-3 py-2 font-body-sm text-body-sm text-on-surface-variant">
-                              <Icon name="lock" className="text-base" />
-                              {slide.title}
+                            <div className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface-container px-3 py-2 font-body-sm text-body-sm text-on-surface-variant">
+                              <Icon name="lock" className="flex-none text-base" />
+                              <span className="truncate">{slide.title}</span>
                             </div>
                           </div>
                         ) : (
@@ -196,15 +215,27 @@ export function CarouselManager({
                             value={slide.title ?? ""}
                             onChange={(e) => handleField(slide.id, "title", e.target.value)}
                             placeholder="หัวข้อ (title)"
-                            className="rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
+                            className="w-full min-w-0 rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
                           />
                         )}
                         <input
                           value={slide.subtitle ?? ""}
                           onChange={(e) => handleField(slide.id, "subtitle", e.target.value)}
                           placeholder="คำบรรยาย (subtitle) — เว้นว่างได้"
-                          className="rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
+                          className="w-full min-w-0 rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
                         />
+                        <select
+                          value={slide.linkProductId ?? ""}
+                          onChange={(e) => handleLinkChange(slide.id, e.target.value)}
+                          className="w-full min-w-0 rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
+                        >
+                          <option value="">— ไม่เชื่อมโยงสินค้า —</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <button
                         type="button"
@@ -240,7 +271,7 @@ export function CarouselManager({
           {uploading ? "กำลังอัปโหลด..." : "เพิ่มสไลด์จากรูปอัปโหลด"}
         </button>
 
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-outline-variant bg-surface-container p-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-dashed border-outline-variant bg-surface-container p-2">
           <select
             value={pickProduct}
             onChange={(e) => setPickProduct(e.target.value)}
@@ -274,7 +305,9 @@ export function CarouselManager({
         onChange={handleUpload}
       />
       <p className="mt-2 font-body-sm text-body-sm text-on-surface-variant">
-        ลากเพื่อเรียงลำดับ — สไลด์จากสินค้าจะใช้รูปหลักและชื่อสินค้าเป็นหัวข้อ (แก้ไขคำบรรยายได้) กด &quot;บันทึกการเปลี่ยนแปลง&quot; เพื่อบันทึกข้อความทั้งหมด
+        ลากเพื่อเรียงลำดับ — สไลด์จากสินค้าจะใช้รูปหลักและชื่อสินค้าเป็นหัวข้อ (แก้ไขคำบรรยายได้)
+        เลือก &quot;สินค้าที่เชื่อมโยง&quot; เพื่อกำหนดว่าคลิกสไลด์แล้วจะไปหน้าสินค้าใด
+        กด &quot;บันทึกการเปลี่ยนแปลง&quot; เพื่อบันทึกข้อความทั้งหมด
       </p>
     </div>
   );

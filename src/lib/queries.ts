@@ -332,7 +332,9 @@ export async function getCarouselSlides(): Promise<CarouselSlide[]> {
   const { data } = await supabase
     .from("carousel_slides")
     .select(
-      "id, image_url, title, subtitle, sort_order, product_id, product:products(name, name_th, media:product_media(url, type, is_primary, sort_order))",
+      "id, image_url, title, subtitle, sort_order, product_id, link_product_id, " +
+        "product:products!carousel_slides_product_id_fkey(name, name_th, media:product_media(url, type, is_primary, sort_order)), " +
+        "link_product:products!carousel_slides_link_product_id_fkey(slug)",
     )
     .order("sort_order");
 
@@ -351,6 +353,8 @@ export async function getCarouselSlides(): Promise<CarouselSlide[]> {
         subtitle: row.subtitle,
         sortOrder: row.sort_order,
         productId: row.product_id ?? null,
+        linkProductId: row.link_product_id ?? null,
+        linkProductSlug: row.link_product?.slug ?? null,
       } satisfies CarouselSlide;
     })
     .filter((s): s is CarouselSlide => s !== null);

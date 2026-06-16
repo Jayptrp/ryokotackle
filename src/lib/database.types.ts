@@ -55,6 +55,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          link_product_id: string | null
           product_id: string | null
           sort_order: number
           subtitle: string | null
@@ -65,6 +66,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          link_product_id?: string | null
           product_id?: string | null
           sort_order?: number
           subtitle?: string | null
@@ -75,6 +77,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          link_product_id?: string | null
           product_id?: string | null
           sort_order?: number
           subtitle?: string | null
@@ -82,6 +85,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "carousel_slides_link_product_id_fkey"
+            columns: ["link_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "carousel_slides_product_id_fkey"
             columns: ["product_id"]

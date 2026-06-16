@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { Icon } from "@/components/icon";
+import { DeleteProductButton } from "@/components/admin/delete-product-button";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   published: { label: "เผยแพร่", color: "bg-secondary-container text-on-secondary-container" },
@@ -191,13 +192,16 @@ export function AdminProductsBrowser({
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/products/${p.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-                    >
-                      <Icon name="edit" className="text-base" />
-                      แก้ไข
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/products/${p.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <Icon name="edit" className="text-base" />
+                        แก้ไข
+                      </Link>
+                      <DeleteProductButton id={p.id} name={p.nameTh ?? p.name} compact />
+                    </div>
                   </td>
                 </tr>
               );

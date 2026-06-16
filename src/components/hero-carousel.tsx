@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
@@ -37,38 +38,47 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {slides.map((slide, i) => (
-        <div
-          key={slide.id}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-1000",
-            i === current ? "opacity-100" : "opacity-0",
-          )}
-        >
-          <Image
-            src={slide.imageUrl}
-            alt={slide.title ?? ""}
-            fill
-            priority={i === 0}
-            className="object-cover"
-            unoptimized
-          />
-          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-primary/60 to-transparent pb-stack-lg">
-            <div className="mb-stack-lg w-full px-6 md:px-10">
-              {slide.title && (
-                <h2 className="max-w-xl font-headline-lg text-headline-lg text-on-primary">
-                  {slide.title}
-                </h2>
-              )}
-              {slide.subtitle && (
-                <p className="mt-stack-sm max-w-lg font-body-lg text-body-lg text-on-primary/80">
-                  {slide.subtitle}
-                </p>
-              )}
+      {slides.map((slide, i) => {
+        const content = (
+          <>
+            <Image
+              src={slide.imageUrl}
+              alt={slide.title ?? ""}
+              fill
+              priority={i === 0}
+              className="object-cover"
+              unoptimized
+            />
+            <div className="absolute inset-0 flex items-end bg-gradient-to-t from-primary/60 to-transparent pb-stack-lg">
+              <div className="mb-stack-lg w-full px-6 md:px-10">
+                {slide.title && (
+                  <h2 className="max-w-xl font-headline-lg text-headline-lg text-on-primary">
+                    {slide.title}
+                  </h2>
+                )}
+                {slide.subtitle && (
+                  <p className="mt-stack-sm max-w-lg font-body-lg text-body-lg text-on-primary/80">
+                    {slide.subtitle}
+                  </p>
+                )}
+              </div>
             </div>
+          </>
+        );
+        const wrapperClassName = cn(
+          "absolute inset-0 block transition-opacity duration-1000",
+          i === current ? "opacity-100" : "pointer-events-none opacity-0",
+        );
+        return slide.linkProductSlug ? (
+          <Link key={slide.id} href={`/products/${slide.linkProductSlug}`} className={wrapperClassName}>
+            {content}
+          </Link>
+        ) : (
+          <div key={slide.id} className={wrapperClassName}>
+            {content}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Controls */}
       {slides.length > 1 && (
