@@ -61,3 +61,6 @@ next-env.d.ts
 /scripts/out/
 /scrape.log
 /scrape-diag.txt
+
+# backups
+/backups/
