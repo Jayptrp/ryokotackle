@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function slugify(str: string) {
-  return str
+  const s = str
     .toLowerCase()
-    .replace(/[^a-z0-9฀-๿]+/g, "-")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 100);
+  return s || "product";
 }
 
 async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminClient>>, base: string, excludeId?: string) {
