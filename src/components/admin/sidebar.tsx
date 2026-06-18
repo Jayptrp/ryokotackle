@@ -22,6 +22,13 @@ const HOME_NAV = {
   ],
 } as const;
 
+const OPTIMIZE_NAV = {
+  label: "เพิ่มประสิทธิภาพ",
+  items: [
+    { href: "/admin/seo", label: "ภาพรวม SEO", icon: "query_stats" },
+  ],
+} as const;
+
 export function Sidebar({ userEmail }: { userEmail?: string }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
@@ -114,6 +121,51 @@ export function Sidebar({ userEmail }: { userEmail?: string }) {
         </div>
 
         {HOME_NAV.items.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={isCollapsed ? item.label : undefined}
+              className={cn(
+                "group flex items-center rounded-xl px-3 py-2.5 transition-all duration-200",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
+                isCollapsed ? "justify-center px-0 mx-1" : "gap-3"
+              )}
+            >
+              <Icon
+                name={item.icon}
+                filled={active}
+                className={cn("text-xl flex-none", !active && "group-hover:scale-110 transition-transform")}
+              />
+              {!isCollapsed && (
+                <span className={cn("truncate font-body-sm text-body-sm", active && "font-medium")}>
+                  {item.label}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+
+        {/* Optimize group */}
+        <div
+          className={cn(
+            "mt-6 mb-2 flex items-center transition-all duration-300",
+            isCollapsed ? "justify-center px-0" : "px-3"
+          )}
+        >
+          {isCollapsed ? (
+            <div className="h-px w-8 bg-outline-variant" />
+          ) : (
+            <span className="font-label-caps text-label-caps tracking-wider text-on-surface-variant/50">
+              {OPTIMIZE_NAV.label}
+            </span>
+          )}
+        </div>
+
+        {OPTIMIZE_NAV.items.map((item) => {
           const active = isActive(item.href);
           return (
             <Link
