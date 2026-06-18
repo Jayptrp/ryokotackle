@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function SeoSummaryCards(props: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const cards = [
     { label: "สินค้าเผยแพร่",   value: props.total,           icon: "inventory_2", accent: false },
