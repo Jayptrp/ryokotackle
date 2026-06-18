@@ -14,12 +14,17 @@ export default async function AdminPage() {
   const supabase = await createAdminClient();
   const categories = await getCategories();
 
-  const { data: rows } = await supabase
-    .from("products")
-    .select(
-      "id, slug, name, name_th, status, is_featured, category:categories!products_category_id_fkey(id, name, name_th, parent_id), product_media(url, type, is_primary, sort_order)",
-    )
-    .order("name");
+  const [{ data: rows }, { data: withDesc }] = await Promise.all([
+    supabase
+      .from("products")
+      .select(
+        "id, slug, name, name_th, status, is_featured, summary, category:categories!products_category_id_fkey(id, name, name_th, parent_id), product_media(url, type, is_primary, sort_order)",
+      )
+      .order("name"),
+    // Lightweight existence check — avoid fetching full Tiptap HTML for all products
+    supabase.from("products").select("id").not("description", "is", null).neq("description", ""),
+  ]);
+  const hasDescSet = new Set((withDesc ?? []).map((r) => r.id));
 
   const products: AdminProduct[] = (rows ?? []).map((p) => {
     const cat = p.category as
@@ -60,6 +65,8 @@ export default async function AdminPage() {
       categorySlug,
       parentSlug,
       imageUrl: primaryImage,
+      hasSummary: !!p.summary?.trim(),
+      hasDescription: hasDescSet.has(p.id),
     };
   });
 

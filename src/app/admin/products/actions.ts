@@ -223,7 +223,7 @@ export async function saveDescription(formData: FormData) {
 
 interface PendingMedia {
   id: string; url: string; type: string; provider: string | null;
-  sortOrder: number; isPrimary: boolean; isNew?: boolean;
+  sortOrder: number; isPrimary: boolean; isNew?: boolean; alt?: string | null;
 }
 
 /**
@@ -295,14 +295,14 @@ export async function saveProductAll(formData: FormData) {
       provider: (item.provider as never) ?? null,
       sort_order: item.sortOrder,
       is_primary: item.isPrimary,
-      alt: null,
+      alt: item.alt ?? null,
     });
   }
 
-  // Update sort_order + is_primary for existing media
+  // Update sort_order + is_primary + alt for existing media
   for (const item of mediaCurrent.filter((m) => !m.isNew)) {
     await supabase.from("product_media")
-      .update({ sort_order: item.sortOrder, is_primary: item.isPrimary })
+      .update({ sort_order: item.sortOrder, is_primary: item.isPrimary, alt: item.alt ?? null })
       .eq("id", item.id);
   }
 
