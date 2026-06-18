@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Icon } from "@/components/icon";
+import { DeleteProductButton } from "@/components/admin/delete-product-button";
 
 export interface SeoGapRow {
   id: string;
@@ -103,13 +104,16 @@ export function SeoGapsTable({ rows }: { rows: SeoGapRow[] }) {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/products/${r.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-                    >
-                      <Icon name="edit" className="text-base" />
-                      แก้ไข
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/products/${r.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <Icon name="edit" className="text-base" />
+                        แก้ไข
+                      </Link>
+                      <DeleteProductButton id={r.id} name={r.nameTh ?? r.name} compact />
+                    </div>
                   </td>
                 </tr>
               );
