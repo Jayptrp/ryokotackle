@@ -23,26 +23,54 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
 
   const realIndex = loop ? (((pos - 1) % n) + n) % n : pos;
 
+  // One-slide-at-a-time lock. Without it, rapid clicks/swipes increment `pos`
+  // past the clones (n+1) before a transition ends, sliding the track off the
+  // end into the bare container background (the "dark blue banner"). Cleared on
+  // transitionend; a safety timeout guarantees it can never get stuck.
+  const sliding = useRef(false);
+  const lockTimer = useRef(0);
+  const lock = useCallback(() => {
+    sliding.current = true;
+    clearTimeout(lockTimer.current);
+    lockTimer.current = window.setTimeout(() => {
+      sliding.current = false;
+    }, 800);
+  }, []);
+  const unlock = useCallback(() => {
+    sliding.current = false;
+    clearTimeout(lockTimer.current);
+  }, []);
+  useEffect(() => () => clearTimeout(lockTimer.current), []);
+
   const next = useCallback(() => {
+    if (sliding.current) return;
+    lock();
     setAnimate(true);
     setPos((p) => p + 1);
-  }, []);
+  }, [lock]);
   const prev = useCallback(() => {
+    if (sliding.current) return;
+    lock();
     setAnimate(true);
     setPos((p) => p - 1);
-  }, []);
+  }, [lock]);
   const goTo = useCallback(
     (i: number) => {
+      const target = loop ? i + 1 : i;
+      if (sliding.current || target === pos) return;
+      lock();
       setAnimate(true);
-      setPos(loop ? i + 1 : i);
+      setPos(target);
     },
-    [loop],
+    [loop, pos, lock],
   );
 
   // When a slide lands on a clone, jump to its real counterpart with animation
   // off so the loop is seamless.
   const handleTransitionEnd = (e: React.TransitionEvent) => {
-    if (e.propertyName !== "transform" || !loop) return;
+    if (e.propertyName !== "transform") return;
+    unlock();
+    if (!loop) return;
     if (pos === n + 1) {
       setAnimate(false);
       setPos(1);
@@ -108,8 +136,8 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
       {/* Sliding track */}
       <div
         className={cn(
-          "flex h-full w-full ease-out",
-          animate && "transition-transform duration-500",
+          "flex h-full w-full ease-in-out",
+          animate && "transition-transform duration-700",
         )}
         style={{ transform: `translateX(-${pos * 100}%)` }}
         onTransitionEnd={handleTransitionEnd}
