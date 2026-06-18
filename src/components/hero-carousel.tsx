@@ -34,7 +34,7 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
 
   return (
     <section
-      className="group relative aspect-[3/1] w-full overflow-hidden rounded-2xl bg-primary-container"
+      className="group relative aspect-[3/1] w-full overflow-hidden rounded-none bg-primary-container lg:rounded-2xl"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

@@ -37,9 +37,13 @@ export async function generateMetadata({
     return { title: "ไม่พบสินค้า", robots: { index: false, follow: false } };
   }
 
+  // Thai-first: prefer the Thai name for all human-readable + SEO text; the
+  // English `name` is kept only as an alternate alias below.
+  const displayName = product.nameTh ?? product.name;
+
   // Title: "{Name} | {Category}" — keyword-rich but concise.
   const titleParts = [
-    product.name,
+    displayName,
     product.category ? `| ${product.category.nameTh ?? product.category.name}` : "",
   ].filter(Boolean);
   const title = titleParts.join(" ").trim();
@@ -49,7 +53,7 @@ export async function generateMetadata({
   const description =
     product.summary?.trim() ||
     (product.description ? toMetaDescription(product.description) : "") ||
-    `${product.name} — ${
+    `${displayName} — ${
       product.category?.nameTh ?? product.category?.name ?? "อุปกรณ์ตกปลา"
     } คุณภาพสูงจาก ${SITE_NAME}`;
 
@@ -70,7 +74,7 @@ export async function generateMetadata({
       title: `${title} | ${SITE_NAME}`,
       description,
       url: absoluteUrl(canonical),
-      images: primaryImage ? [{ url: primaryImage, alt: product.name }] : undefined,
+      images: primaryImage ? [{ url: primaryImage, alt: displayName }] : undefined,
     },
     twitter: {
       card: primaryImage ? "summary_large_image" : "summary",
@@ -91,6 +95,8 @@ export default async function ProductDetailPage({
   if (!product || product.status !== "published") notFound();
 
   const { category } = product;
+  // Thai-first display name; English `name` shown only as a secondary alias.
+  const displayName = product.nameTh ?? product.name;
 
   const productImages = product.media
     .filter((m) => m.type === "image")
@@ -101,9 +107,9 @@ export default async function ProductDetailPage({
   const productLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name,
-    ...(product.nameTh && product.nameTh !== product.name
-      ? { alternateName: product.nameTh }
+    name: displayName,
+    ...(product.name && product.name !== displayName
+      ? { alternateName: product.name }
       : {}),
     ...(productImages.length ? { image: productImages } : {}),
     ...(product.summary ? { description: product.summary } : {}),
@@ -119,7 +125,7 @@ export default async function ProductDetailPage({
     ...(category
       ? [{ name: category.nameTh ?? category.name, url: absoluteUrl(`/category/${category.slug}`) }]
       : []),
-    { name: product.name, url: canonical },
+    { name: displayName, url: canonical },
   ];
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -153,12 +159,12 @@ export default async function ProductDetailPage({
           </>
         )}
         <Icon name="chevron_right" className="text-[14px]" />
-        <span className="font-label-caps text-label-caps">{product.name}</span>
+        <span className="font-label-caps text-label-caps">{displayName}</span>
       </div>
 
       <div className="grid grid-cols-1 gap-gutter md:grid-cols-12">
         <div className="md:col-span-7">
-          <ProductGallery media={product.media} alt={product.name} />
+          <ProductGallery media={product.media} alt={displayName} />
         </div>
 
         {/* Info */}
@@ -175,11 +181,11 @@ export default async function ProductDetailPage({
               )}
             </div>
             <h1 className="font-headline-lg text-headline-lg text-primary">
-              {product.name}
+              {displayName}
             </h1>
-            {product.nameTh && product.nameTh !== product.name && (
+            {product.name && product.name !== displayName && (
               <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">
-                {product.nameTh}
+                {product.name}
               </p>
             )}
             {product.summary && (

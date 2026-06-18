@@ -210,6 +210,31 @@
   }
 }
 
+/* Horizontal scroller: clean (no bar) on touch where you swipe with a finger,
+   but show a thin draggable bar on mouse/trackpad devices so desktop can scroll. */
+@utility scroll-x-touch {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  @media (pointer: fine) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-outline-variant) transparent;
+    &::-webkit-scrollbar {
+      display: block;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: var(--color-outline-variant);
+      border-radius: 9999px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+}
+
 /* Tiptap (admin editor) — bits ProseMirror injects that utilities can't reach. */
 .ProseMirror .tableWrapper { overflow-x: auto; }
 .ProseMirror table .column-resize-handle {

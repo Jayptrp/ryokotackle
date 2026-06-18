@@ -36,12 +36,14 @@ export default async function HomePage() {
         และอุปกรณ์ตกปลาคุณภาพสูง
       </h1>
 
-      <Container className="pt-stack-md">
+      {/* Hero: full-bleed (edge-to-edge, square corners) on mobile + tablet;
+          contained with gutters + rounded corners from desktop (lg) up. */}
+      <div className="pt-stack-md lg:mx-auto lg:w-full lg:max-w-[var(--container-max)] lg:px-margin-desktop">
         <HeroCarousel slides={slides} />
-      </Container>
+      </div>
 
       {/* Categories */}
-      <section className="py-section-gap">
+      <section className="py-stack-lg md:py-section-gap">
         <Container>
           <div className="mb-stack-lg flex items-center justify-between">
             <h2 className="font-headline-md text-headline-md text-primary">
@@ -94,7 +96,7 @@ export default async function HomePage() {
 
       {/* Featured */}
       {featured.length > 0 && (
-        <section className="pb-section-gap">
+        <section className="pb-stack-lg md:pb-section-gap">
           <Container>
             <div className="mb-stack-lg">
               <h2 className="font-headline-md text-headline-md text-primary">
@@ -104,7 +106,7 @@ export default async function HomePage() {
                 อุปกรณ์ที่ทีมงานคัดสรร
               </p>
             </div>
-            <div className="-mx-margin-mobile flex gap-stack-md overflow-x-auto px-margin-mobile pb-stack-md no-scrollbar md:mx-0 md:px-0">
+            <div className="-mx-margin-mobile flex gap-stack-md overflow-x-auto px-margin-mobile pb-stack-md scroll-x-touch md:mx-0 md:px-0">
               {featured.map((product) => (
                 <ProductCard
                   key={product.id}
