@@ -83,63 +83,98 @@ export async function saveCarousel(input: {
 
 /* ----------------------------------------------------------- categories */
 
-/** Use an uploaded image as the category card background. */
-export async function setCategoryImageUrl(categoryId: string, imageUrl: string) {
-  const supabase = await createAdminClient();
-  const { error } = await supabase
-    .from("categories")
-    .update({ image_url: imageUrl, image_product_id: null })
-    .eq("id", categoryId);
-  if (error) throw error;
-  revalidatePath("/");
+export interface CategorySaveInput {
+  id: string;
+  /** Uploaded background URL, or null. Mutually exclusive with imageProductId. */
+  imageUrl: string | null;
+  /** Product whose primary image backs the card, or null (auto-pick). */
+  imageProductId: string | null;
+  /** Disclaimer shown on the category page ("" clears it). */
+  disclaimer: string;
 }
 
-/** Use a product's primary image as the category card background. */
-export async function setCategoryImageProduct(
-  categoryId: string,
-  productId: string | null,
-) {
+/**
+ * Persist every category card in one call — the unified-save analog of
+ * `saveCarousel`. Nothing touches the DB until this runs: it first deletes the
+ * categories the admin removed (guarded — a category that still has products or
+ * sub-categories is refused, never silently orphaned, since the FKs are
+ * `on delete set null`), then updates the background image source
+ * (uploaded / product / auto) and disclaimer for the rest.
+ */
+export async function saveCategoriesAll(input: {
+  categories: CategorySaveInput[];
+  deletedIds: string[];
+}) {
   const supabase = await createAdminClient();
-  const { error } = await supabase
-    .from("categories")
-    .update({ image_product_id: productId || null, image_url: null })
-    .eq("id", categoryId);
-  if (error) throw error;
-  revalidatePath("/");
-}
 
-/** Save (or clear) the disclaimer text for a category page. */
-export async function saveCategoryDisclaimer(categoryId: string, disclaimer: string) {
-  const supabase = await createAdminClient();
-  const { error } = await supabase
-    .from("categories")
-    .update({ disclaimer: disclaimer.trim() || null })
-    .eq("id", categoryId);
-  if (error) throw error;
+  // 1. Deletions — only categories with no products and no sub-categories.
+  if (input.deletedIds.length) {
+    const [{ count: productCount }, { count: childCount }] = await Promise.all([
+      supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .in("category_id", input.deletedIds),
+      supabase
+        .from("categories")
+        .select("id", { count: "exact", head: true })
+        .in("parent_id", input.deletedIds),
+    ]);
+    if ((productCount ?? 0) > 0 || (childCount ?? 0) > 0) {
+      throw new Error("ลบไม่ได้: หมวดหมู่ยังมีสินค้าหรือหมวดย่อยอยู่");
+    }
+    const { error } = await supabase
+      .from("categories")
+      .delete()
+      .in("id", input.deletedIds);
+    if (error) throw error;
+  }
+
+  // 2. Updates — image source (uploaded / product / auto) + disclaimer.
+  const results = await Promise.all(
+    input.categories.map((c) =>
+      supabase
+        .from("categories")
+        .update({
+          image_url: c.imageUrl,
+          image_product_id: c.imageProductId,
+          disclaimer: c.disclaimer.trim() || null,
+        })
+        .eq("id", c.id),
+    ),
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
+
+  revalidatePath("/");
   revalidatePath("/category", "layout");
-}
-
-/** Reset the card back to the auto-picked product image. */
-export async function clearCategoryImage(categoryId: string) {
-  const supabase = await createAdminClient();
-  const { error } = await supabase
-    .from("categories")
-    .update({ image_url: null, image_product_id: null })
-    .eq("id", categoryId);
-  if (error) throw error;
-  revalidatePath("/");
 }
 
 /* ------------------------------------------------------------- featured */
 
-/** Toggle a product's featured flag (shown in the homepage featured area). */
-export async function setFeatured(productId: string, value: boolean) {
+/**
+ * Persist featured-flag changes in one call — the unified-save analog of
+ * `saveCarousel`. The client stages toggles locally and sends only the rows
+ * that actually flipped: `featured` get the flag set, `unfeatured` cleared.
+ */
+export async function saveFeatured(input: {
+  featured: string[];
+  unfeatured: string[];
+}) {
   const supabase = await createAdminClient();
-  const { error } = await supabase
-    .from("products")
-    .update({ is_featured: value })
-    .eq("id", productId);
-  if (error) throw error;
+  if (input.featured.length) {
+    const { error } = await supabase
+      .from("products")
+      .update({ is_featured: true })
+      .in("id", input.featured);
+    if (error) throw error;
+  }
+  if (input.unfeatured.length) {
+    const { error } = await supabase
+      .from("products")
+      .update({ is_featured: false })
+      .in("id", input.unfeatured);
+    if (error) throw error;
+  }
   revalidatePath("/");
   revalidatePath("/admin/home/featured");
 }

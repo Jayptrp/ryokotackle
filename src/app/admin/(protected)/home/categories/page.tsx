@@ -38,6 +38,7 @@ export default async function CategoryImagesAdminPage() {
     imageProductId: cat.imageProductId,
     disclaimer: cat.disclaimer,
     resolved: resolvedBySlug.get(cat.slug) ?? null,
+    hasChildren: all.some((c) => c.parentSlug === cat.slug),
     products: products
       .filter(
         (p) => p.primaryImage && p.category && topOf(p.category.slug) === cat.slug,

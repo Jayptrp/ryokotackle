@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState, useTransition } from "react";
-import { setFeatured } from "@/app/admin/home/actions";
+import { saveFeatured } from "@/app/admin/home/actions";
 import { Icon } from "@/components/icon";
 
 export interface FeaturedRow {
@@ -15,11 +15,24 @@ export interface FeaturedRow {
 
 export function FeaturedManager({ initial }: { initial: FeaturedRow[] }) {
   const [rows, setRows] = useState(initial);
+  // Last-saved baseline (id → isFeatured) for dirty tracking. Nothing hits the
+  // DB until "บันทึก" — the same unified-save pattern as the carousel manager.
+  const [orig, setOrig] = useState<Map<string, boolean>>(
+    () => new Map(initial.map((r) => [r.id, r.isFeatured])),
+  );
   const [q, setQ] = useState("");
   const [onlyFeatured, setOnlyFeatured] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [saving, startSaving] = useTransition();
 
   const featuredCount = rows.filter((r) => r.isFeatured).length;
+
+  // ── dirty tracking (diff against `orig`) ───────────────────────────────────
+  const changed = useMemo(
+    () => rows.filter((r) => r.isFeatured !== orig.get(r.id)),
+    [rows, orig],
+  );
+  const dirtyIds = useMemo(() => new Set(changed.map((r) => r.id)), [changed]);
+  const dirty = changed.length > 0;
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -34,11 +47,25 @@ export function FeaturedManager({ initial }: { initial: FeaturedRow[] }) {
   }, [rows, q, onlyFeatured]);
 
   function toggle(row: FeaturedRow) {
-    const next = !row.isFeatured;
     setRows((prev) =>
-      prev.map((r) => (r.id === row.id ? { ...r, isFeatured: next } : r)),
+      prev.map((r) => (r.id === row.id ? { ...r, isFeatured: !r.isFeatured } : r)),
     );
-    startTransition(() => setFeatured(row.id, next));
+  }
+
+  function revertAll() {
+    setRows((prev) =>
+      prev.map((r) => ({ ...r, isFeatured: orig.get(r.id) ?? false })),
+    );
+  }
+
+  function handleSave() {
+    startSaving(async () => {
+      await saveFeatured({
+        featured: changed.filter((r) => r.isFeatured).map((r) => r.id),
+        unfeatured: changed.filter((r) => !r.isFeatured).map((r) => r.id),
+      });
+      setOrig(new Map(rows.map((r) => [r.id, r.isFeatured])));
+    });
   }
 
   return (
@@ -70,52 +97,96 @@ export function FeaturedManager({ initial }: { initial: FeaturedRow[] }) {
         </span>
       </div>
 
+      {/* Save-all bar */}
+      <div className="mb-4 flex items-center justify-end gap-3">
+        {dirty && !saving && (
+          <>
+            <span className="font-body-sm text-body-sm text-error">
+              มีการเปลี่ยนแปลงที่ยังไม่บันทึก ({changed.length})
+            </span>
+            <button
+              type="button"
+              onClick={revertAll}
+              title="คืนค่าทั้งหมด"
+              className="flex items-center gap-1 rounded-lg border border-error/40 px-2.5 py-2 font-label-caps text-label-caps text-error transition-colors hover:bg-error-container/30"
+            >
+              <Icon name="restart_alt" className="text-base" />
+              คืนค่าทั้งหมด
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !dirty}
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
+        >
+          <Icon
+            name={saving ? "hourglass_top" : "save"}
+            className={saving ? "animate-spin text-base" : "text-base"}
+          />
+          {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+        </button>
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
         {filtered.length === 0 && (
           <p className="px-4 py-12 text-center font-body-sm text-body-sm text-on-surface-variant">
             ไม่พบสินค้า
           </p>
         )}
-        {filtered.map((row, i) => (
-          <div
-            key={row.id}
-            className={`flex items-center gap-3 border-b border-outline-variant px-4 py-3 last:border-0 ${
-              i % 2 ? "bg-surface-container-lowest" : ""
-            }`}
-          >
-            <div className="relative h-12 w-12 flex-none overflow-hidden rounded-lg bg-surface-container">
-              {row.image ? (
-                <Image src={row.image} alt={row.name} fill className="object-cover" unoptimized />
-              ) : (
-                <div className="flex h-full items-center justify-center text-on-surface-variant">
-                  <Icon name="image" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="font-body-sm text-body-sm font-medium text-on-surface">
-                {row.nameTh ?? row.name}
-              </p>
-              {row.nameTh && row.nameTh !== row.name && (
-                <p className="font-body-sm text-body-sm text-on-surface-variant">{row.name}</p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => toggle(row)}
-              disabled={isPending}
-              aria-pressed={row.isFeatured}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-label-caps text-label-caps transition-colors ${
-                row.isFeatured
-                  ? "bg-secondary text-on-secondary hover:bg-on-secondary-container"
-                  : "border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+        {filtered.map((row, i) => {
+          const isDirty = dirtyIds.has(row.id);
+          return (
+            <div
+              key={row.id}
+              className={`flex items-center gap-3 border-b border-outline-variant px-4 py-3 last:border-0 ${
+                isDirty
+                  ? "bg-error-container/10"
+                  : i % 2
+                    ? "bg-surface-container-lowest"
+                    : ""
               }`}
             >
-              <Icon name="star" filled={row.isFeatured} className="text-base" />
-              {row.isFeatured ? "แนะนำ" : "ตั้งเป็นแนะนำ"}
-            </button>
-          </div>
-        ))}
+              <div className="relative h-12 w-12 flex-none overflow-hidden rounded-lg bg-surface-container">
+                {row.image ? (
+                  <Image src={row.image} alt={row.name} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-on-surface-variant">
+                    <Icon name="image" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="font-body-sm text-body-sm font-medium text-on-surface">
+                  {row.nameTh ?? row.name}
+                </p>
+                {row.nameTh && row.nameTh !== row.name && (
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{row.name}</p>
+                )}
+              </div>
+              {isDirty && (
+                <span className="flex-none rounded-full bg-error-container/40 px-2 py-0.5 font-label-caps text-label-caps text-error">
+                  ยังไม่บันทึก
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => toggle(row)}
+                disabled={saving}
+                aria-pressed={row.isFeatured}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-label-caps text-label-caps transition-colors disabled:opacity-50 ${
+                  row.isFeatured
+                    ? "bg-secondary text-on-secondary hover:bg-on-secondary-container"
+                    : "border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+                }`}
+              >
+                <Icon name="star" filled={row.isFeatured} className="text-base" />
+                {row.isFeatured ? "แนะนำ" : "ตั้งเป็นแนะนำ"}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
