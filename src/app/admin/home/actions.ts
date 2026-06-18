@@ -108,6 +108,17 @@ export async function setCategoryImageProduct(
   revalidatePath("/");
 }
 
+/** Save (or clear) the disclaimer text for a category page. */
+export async function saveCategoryDisclaimer(categoryId: string, disclaimer: string) {
+  const supabase = await createAdminClient();
+  const { error } = await supabase
+    .from("categories")
+    .update({ disclaimer: disclaimer.trim() || null })
+    .eq("id", categoryId);
+  if (error) throw error;
+  revalidatePath("/category", "layout");
+}
+
 /** Reset the card back to the auto-picked product image. */
 export async function clearCategoryImage(categoryId: string) {
   const supabase = await createAdminClient();

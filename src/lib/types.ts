@@ -17,6 +17,8 @@ export interface Category {
   imageUrl: string | null;
   /** Product whose primary image backs the card when no image is uploaded. */
   imageProductId: string | null;
+  /** Optional disclaimer shown between the header and products on the category page. */
+  disclaimer: string | null;
   children?: Category[];
 }
 

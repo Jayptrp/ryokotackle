@@ -51,6 +51,7 @@ function mapCategory(row: any): Category {
     sortOrder: row.sort_order,
     imageUrl: row.image_url ?? null,
     imageProductId: row.image_product_id ?? null,
+    disclaimer: row.disclaimer ?? null,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -70,7 +71,7 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("categories")
-    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id")
+    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id, disclaimer")
     .order("sort_order");
 
   const rows = data ?? [];
@@ -250,7 +251,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
+      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -271,6 +272,7 @@ export async function getProductBySlug(
       sortOrder: row.category.sort_order,
       imageUrl: null,
       imageProductId: null,
+      disclaimer: row.category.disclaimer ?? null,
       parentSlug: row.category.parent_id
         ? (all.find((c) => c.id === row.category.parent_id)?.slug ?? null)
         : null,

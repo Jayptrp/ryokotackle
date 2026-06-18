@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
   clearCategoryImage,
+  saveCategoryDisclaimer,
   setCategoryImageProduct,
   setCategoryImageUrl,
 } from "@/app/admin/home/actions";
@@ -23,11 +24,17 @@ export interface CategoryRow {
   icon: string | null;
   imageUrl: string | null;
   imageProductId: string | null;
+  disclaimer: string | null;
   /** Currently resolved background (uploaded → product → auto-pick). */
   resolved: string | null;
   /** Published products (with a primary image) in this category to choose from. */
   products: CategoryProduct[];
 }
+
+const DEFAULT_DISCLAIMER =
+  "ในหมวดหมู่นี้ สินค้าบางรายการอาจต้องการการระบุรุ่นหรือรายละเอียดเพิ่มเติมเพื่อความถูกต้องในการจัดส่ง " +
+  "หากท่านต้องการอะไหล่สำหรับซ่อมแซม หรือต้องการชิ้นส่วนเฉพาะส่วน กรุณาติดต่อทีมงาน Ryoko โดยตรง " +
+  "เพื่อให้เราสามารถแนะนำและจัดหาสินค้าที่ตรงตามความต้องการของท่านได้อย่างถูกต้องและแม่นยำ";
 
 function CategoryCardEditor({ row }: { row: CategoryRow }) {
   const [imageUrl, setImageUrl] = useState(row.imageUrl);
@@ -38,6 +45,23 @@ function CategoryCardEditor({ row }: { row: CategoryRow }) {
   const [q, setQ] = useState("");
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Disclaimer modal
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [disclaimerText, setDisclaimerText] = useState(row.disclaimer ?? "");
+  const [savingDisclaimer, setSavingDisclaimer] = useState(false);
+
+  function openDisclaimer() {
+    setDisclaimerText(row.disclaimer ?? DEFAULT_DISCLAIMER);
+    setDisclaimerOpen(true);
+  }
+
+  async function handleSaveDisclaimer() {
+    setSavingDisclaimer(true);
+    await saveCategoryDisclaimer(row.id, disclaimerText);
+    setSavingDisclaimer(false);
+    setDisclaimerOpen(false);
+  }
 
   const autoImage = row.products[0]?.image ?? null;
 
@@ -119,6 +143,19 @@ function CategoryCardEditor({ row }: { row: CategoryRow }) {
                   ? "รูปจากสินค้า"
                   : "อัตโนมัติ"}
             </span>
+            <button
+              type="button"
+              onClick={openDisclaimer}
+              title="แก้ไขข้อความแจ้งเตือนในหน้าหมวดหมู่"
+              className={`ml-auto flex items-center gap-1 rounded-lg border px-2.5 py-1 font-label-caps text-label-caps transition-colors ${
+                row.disclaimer
+                  ? "border-secondary/50 bg-secondary-container/30 text-secondary hover:bg-secondary-container/60"
+                  : "border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+              }`}
+            >
+              <Icon name="edit" className="text-base" />
+              
+            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -227,6 +264,48 @@ function CategoryCardEditor({ row }: { row: CategoryRow }) {
         className="hidden"
         onChange={handleUpload}
       />
+
+      {/* Disclaimer modal */}
+      {disclaimerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setDisclaimerOpen(false); }}
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-1 font-headline-sm text-headline-sm text-primary">
+              ข้อความแจ้งเตือน — {row.label}
+            </h2>
+            <p className="mb-4 font-body-sm text-body-sm text-on-surface-variant">
+              แสดงระหว่างหัวหมวดหมู่กับรายการสินค้า เว้นว่างเพื่อซ่อน
+            </p>
+            <textarea
+              rows={6}
+              value={disclaimerText}
+              onChange={(e) => setDisclaimerText(e.target.value)}
+              className="w-full resize-y rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 font-body-md text-body-md leading-relaxed outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+              placeholder="ข้อความที่ต้องการแสดงในหน้าหมวดหมู่..."
+            />
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDisclaimerOpen(false)}
+                className="rounded-lg border border-outline-variant px-4 py-2 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDisclaimer}
+                disabled={savingDisclaimer}
+                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
+              >
+                {savingDisclaimer && <Icon name="hourglass_top" className="animate-spin text-base" />}
+                บันทึก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

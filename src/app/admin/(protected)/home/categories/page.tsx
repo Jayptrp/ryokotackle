@@ -36,6 +36,7 @@ export default async function CategoryImagesAdminPage() {
     icon: cat.icon,
     imageUrl: cat.imageUrl,
     imageProductId: cat.imageProductId,
+    disclaimer: cat.disclaimer,
     resolved: resolvedBySlug.get(cat.slug) ?? null,
     products: products
       .filter(
