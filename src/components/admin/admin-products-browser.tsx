@@ -211,9 +211,9 @@ export function AdminProductsBrowser({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-body-sm text-body-sm font-medium text-on-surface">{p.name}</p>
+                    <p className="font-body-sm text-body-sm font-medium text-on-surface">{p.nameTh ?? p.name}</p>
                     {p.nameTh && (
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">{p.nameTh}</p>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant">{p.name}</p>
                     )}
                     <SeoGaps p={p} />
                   </td>
