@@ -9,7 +9,6 @@ import {
   getCarouselSlides,
   getCategoryCards,
   getFeatured,
-  getNewArrivals,
 } from "@/lib/queries";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 
@@ -20,11 +19,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [slides, categories, featured, newArrivals] = await Promise.all([
+  const [slides, categories, featured] = await Promise.all([
     getCarouselSlides(),
     getCategoryCards(),
     getFeatured(),
-    getNewArrivals(8),
   ]);
 
   return (
@@ -111,7 +109,7 @@ export default async function HomePage() {
                 <ProductCard
                   key={product.id}
                   product={product}
-                  className="w-64 flex-none"
+                  className="w-44 flex-none sm:w-48"
                 />
               ))}
             </div>
@@ -119,61 +117,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* New arrivals */}
-      {newArrivals.length > 0 && (
-        <section className="pb-section-gap">
-          <Container>
-            <div className="mb-stack-lg flex items-end justify-between">
-              <div>
-                <h2 className="font-headline-md text-headline-md text-primary">
-                  มาใหม่
-                </h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  สินค้าล่าสุดในแคตตาล็อก
-                </p>
-              </div>
-              <Link
-                href="/products?sort=newest"
-                className="flex items-center gap-1 font-label-caps text-label-caps text-secondary transition-all hover:gap-2"
-              >
-                ดูทั้งหมด <Icon name="arrow_forward" className="text-sm" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-gutter sm:grid-cols-3 lg:grid-cols-4">
-              {newArrivals.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
-
-      {/* Newsletter CTA */}
-      <section className="mb-section-gap">
-        <Container>
-          <div className="flex flex-col items-center rounded-xl bg-primary-container p-stack-lg text-center md:p-16">
-            <h2 className="font-headline-lg text-headline-lg text-on-primary">
-              ร่วมเป็นส่วนหนึ่งของวิถีแห่ง Ryoko
-            </h2>
-            <p className="mt-stack-sm max-w-2xl font-body-lg text-body-lg text-on-primary/70">
-              ติดตามข่าวสาร สินค้าใหม่ และเทคนิคการตกปลาแบบมืออาชีพ
-            </p>
-            <form className="mt-stack-lg flex w-full max-w-lg flex-col gap-stack-sm md:flex-row">
-              <input
-                type="email"
-                placeholder="อีเมลของคุณ"
-                className="flex-grow rounded-lg border border-white/20 bg-white/10 px-6 py-4 text-white outline-none transition-all placeholder:text-white/50 focus:ring-1 focus:ring-secondary"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-secondary px-8 py-4 font-label-caps text-label-caps text-on-secondary transition-all hover:bg-on-secondary-container"
-              >
-                สมัครสมาชิก
-              </button>
-            </form>
-          </div>
-        </Container>
-      </section>
     </>
   );
 }
