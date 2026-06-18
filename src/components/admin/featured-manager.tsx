@@ -95,14 +95,12 @@ export function FeaturedManager({ initial }: { initial: FeaturedRow[] }) {
         <span className="rounded-full bg-secondary-container px-3 py-1 font-label-caps text-label-caps text-on-secondary-container">
           แนะนำ {featuredCount} รายการ
         </span>
-      </div>
 
-      {/* Save-all bar */}
-      <div className="mb-4 flex items-center justify-end gap-3">
+        {/* Save controls — inline with the search bar */}
         {dirty && !saving && (
           <>
             <span className="font-body-sm text-body-sm text-error">
-              มีการเปลี่ยนแปลงที่ยังไม่บันทึก ({changed.length})
+              ยังไม่บันทึก ({changed.length})
             </span>
             <button
               type="button"
