@@ -33,7 +33,6 @@ export function DeleteProductButton({
         ) : (
           <Icon name="delete" className="text-base" />
         )}
-        ลบ
       </button>
     );
   }

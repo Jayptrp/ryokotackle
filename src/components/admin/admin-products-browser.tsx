@@ -234,10 +234,9 @@ export function AdminProductsBrowser({
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         href={`/admin/products/${p.id}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                        className="inline-flex items-center rounded-lg border border-outline-variant px-3 py-1.5 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
                       >
                         <Icon name="edit" className="text-base" />
-                        แก้ไข
                       </Link>
                       <DeleteProductButton id={p.id} name={p.nameTh ?? p.name} compact />
                     </div>

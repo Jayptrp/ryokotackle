@@ -7,6 +7,7 @@ import {
   type AdminProduct,
   type AdminCategory,
 } from "@/components/admin/admin-products-browser";
+import { SeoSummaryCards } from "@/components/admin/seo-summary-cards";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,15 @@ export default async function AdminPage() {
     parentSlug: c.parentSlug ?? null,
   }));
 
+  const pub = products.filter((p) => p.status === "published");
+  const seoCounts = {
+    total:         pub.length,
+    noImage:       pub.filter((p) => !p.imageUrl).length,
+    noNameTh:      pub.filter((p) => !p.nameTh).length,
+    noSummary:     pub.filter((p) => !p.hasSummary).length,
+    noDescription: pub.filter((p) => !p.hasDescription).length,
+  };
+
   return (
     <div>
       {/* Header */}
@@ -90,6 +100,8 @@ export default async function AdminPage() {
           เพิ่มสินค้าใหม่
         </Link>
       </div>
+
+      <SeoSummaryCards {...seoCounts} />
 
       <AdminProductsBrowser products={products} categories={adminCategories} />
     </div>
