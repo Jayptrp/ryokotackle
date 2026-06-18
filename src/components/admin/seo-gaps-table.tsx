@@ -57,7 +57,7 @@ export function SeoGapsTable({ rows }: { rows: SeoGapRow[] }) {
               <th className="w-28 whitespace-nowrap px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">
                 สถานะ
               </th>
-              <th className="w-72 whitespace-nowrap px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">
+              <th className="px-4 py-3 text-left font-label-caps text-label-caps text-on-surface-variant">
                 ข้อมูล SEO
               </th>
               <th className="px-4 py-3" />
