@@ -126,7 +126,7 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
 
   return (
     <section
-      className="group relative aspect-[3/1] w-full overflow-hidden rounded-none bg-primary-container lg:rounded-2xl"
+      className="group relative aspect-[3/1] w-full overflow-hidden rounded-none bg-primary-container shadow-md lg:rounded-2xl"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={onTouchStart}
@@ -151,11 +151,13 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
               alt={slide.title ?? ""}
               fill
               priority={loop ? i === 1 : i === 0}
-              className="object-cover"
+              className="object-cover transition-transform duration-300 group-hover:scale-102"
               unoptimized
             />
           );
-          const slideClassName = "relative h-full w-full shrink-0";
+          // overflow-hidden clips each image to its own slide, so a hovered
+          // slide's zoom can't bleed into the neighbouring slide.
+          const slideClassName = "relative h-full w-full shrink-0 overflow-hidden";
           // Clones share ids with real slides, so key by track position.
           return slide.linkProductSlug ? (
             <Link

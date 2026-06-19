@@ -141,12 +141,16 @@ export default async function CategoryPage({
         </div>
       )}
 
-      <ProductsBrowser
-        products={products}
-        categories={categories}
-        lockCategory={slug}
-        basePath={`/category/${slug}`}
-      />
+      {/* Hide the browser for product-less categories (e.g. อะไหล่, which only
+          carries a disclaimer) so it doesn't render an empty results box. */}
+      {products.length > 0 && (
+        <ProductsBrowser
+          products={products}
+          categories={categories}
+          lockCategory={slug}
+          basePath={`/category/${slug}`}
+        />
+      )}
     </Container>
   );
 }

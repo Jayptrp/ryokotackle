@@ -228,7 +228,7 @@ export function ProductsBrowser({
       </p>
 
       {pageItems.length > 0 ? (
-        <section className="grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid grid-cols-2 gap-gutter sm:grid-cols-3 lg:grid-cols-4">
           {pageItems.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

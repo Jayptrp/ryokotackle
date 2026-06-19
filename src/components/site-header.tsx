@@ -163,7 +163,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                     className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-body-sm text-body-sm text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                   >
                     <Icon name={c.icon ?? "category"} className="text-lg" />
-                    {c.name}
+                    {c.nameTh ?? c.name}
                   </Link>
                 ))}
 
