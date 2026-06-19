@@ -5,8 +5,8 @@ import { COMPANY, SITE_NAME } from "@/lib/seo";
 
 const FOOTER_LINKS = [
   { href: "/privacy", label: "นโยบายความเป็นส่วนตัว" },
-  { href: "/terms", label: "ข้อกำหนดและเงื่อนไข" },
-  { href: "/shipping", label: "การจัดส่ง" },
+  // { href: "/terms", label: "ข้อกำหนดและเงื่อนไข" },
+  // { href: "/shipping", label: "การจัดส่ง" },
 ] as const;
 
 const SOCIAL = [
