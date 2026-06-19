@@ -13,6 +13,39 @@ function slugify(str: string) {
   return s || "product";
 }
 
+/**
+ * Revalidate the `/category/{slug}` pages affected when a product's category
+ * changes. Category pages are statically prerendered and each one lists its own
+ * products PLUS its direct children's, so for every given category id we
+ * invalidate that category's page AND its parent's. Pass the product's old and
+ * new category ids; nulls/unknown ids are ignored.
+ */
+async function revalidateCategoryPaths(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  categoryIds: (string | null | undefined)[],
+) {
+  const ids = categoryIds.filter((x): x is string => !!x);
+  if (!ids.length) return;
+
+  const { data } = await supabase
+    .from("categories")
+    .select("id, slug, parent_id");
+  if (!data) return;
+
+  const byId = new Map(data.map((c) => [c.id, c]));
+  const slugs = new Set<string>();
+  for (const id of ids) {
+    const cat = byId.get(id);
+    if (!cat) continue;
+    slugs.add(cat.slug);
+    if (cat.parent_id) {
+      const parent = byId.get(cat.parent_id);
+      if (parent) slugs.add(parent.slug);
+    }
+  }
+  for (const slug of slugs) revalidatePath(`/category/${slug}`);
+}
+
 async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminClient>>, base: string, excludeId?: string) {
   const slug = slugify(base);
   let attempt = 0;
@@ -87,6 +120,7 @@ export async function saveProduct(formData: FormData) {
   };
 
   let productId = id;
+  let oldCategoryId: string | null = null;
   if (isNew) {
     const { data, error } = await supabase
       .from("products")
@@ -96,6 +130,15 @@ export async function saveProduct(formData: FormData) {
     if (error) throw error;
     productId = data.id;
   } else {
+    // Capture the previous category before overwriting it, so we can also
+    // revalidate the category page the product is moving *away* from.
+    const { data: prev } = await supabase
+      .from("products")
+      .select("category_id")
+      .eq("id", id!)
+      .single();
+    oldCategoryId = prev?.category_id ?? null;
+
     const { error } = await supabase
       .from("products")
       .update(payload)
@@ -107,6 +150,7 @@ export async function saveProduct(formData: FormData) {
   revalidatePath(`/products/${slug}`);
   revalidatePath("/");
   revalidatePath("/admin");
+  await revalidateCategoryPaths(supabase, [oldCategoryId, categoryId]);
 
   if (isNew) redirect(`/admin/products/${productId}`);
 }
@@ -267,11 +311,21 @@ export async function saveProductAll(formData: FormData) {
   };
 
   let productId = id;
+  let oldCategoryId: string | null = null;
   if (isNew) {
     const { data, error } = await supabase.from("products").insert(payload).select("id, slug").single();
     if (error) throw error;
     productId = data.id;
   } else {
+    // Capture the previous category before overwriting it, so we can also
+    // revalidate the category page the product is moving *away* from.
+    const { data: prev } = await supabase
+      .from("products")
+      .select("category_id")
+      .eq("id", id!)
+      .single();
+    oldCategoryId = prev?.category_id ?? null;
+
     const { error } = await supabase.from("products").update(payload).eq("id", id!);
     if (error) throw error;
   }
@@ -319,6 +373,7 @@ export async function saveProductAll(formData: FormData) {
   revalidatePath(`/products/${slug}`);
   revalidatePath("/");
   revalidatePath("/admin");
+  await revalidateCategoryPaths(supabase, [oldCategoryId, categoryId]);
 
   redirect(isNew ? `/admin/products/${productId}` : `/admin/products/${id}`);
 }
@@ -328,7 +383,7 @@ export async function deleteProduct(id: string) {
   const supabase = await createAdminClient();
   const { data } = await supabase
     .from("products")
-    .select("slug, description, media:product_media(url)")
+    .select("slug, category_id, description, media:product_media(url)")
     .eq("id", id)
     .single();
 
@@ -351,6 +406,7 @@ export async function deleteProduct(id: string) {
   revalidatePath("/products");
   revalidatePath("/admin");
   if (data?.slug) revalidatePath(`/products/${data.slug}`);
+  await revalidateCategoryPaths(supabase, [data?.category_id]);
   redirect("/admin");
 }
 

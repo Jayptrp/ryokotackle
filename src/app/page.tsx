@@ -74,15 +74,9 @@ export default async function HomePage() {
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary" />
                 )}
-                {/* Readability scrim */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/25 to-transparent" />
-
-                {/* Footer: icon down on the left, beside the name */}
-                <div className="relative flex items-center gap-2 p-stack-md">
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition-colors group-hover:bg-secondary group-hover:text-on-secondary">
-                    <Icon name={category.icon ?? "category"} className="text-xl" />
-                  </span>
-                  <span className="font-body-md text-body-md font-medium text-on-primary">
+                {/* Name in a centered pill ("notch") at the bottom for readability */}
+                <div className="relative mb-stack-md flex justify-center px-2">
+                  <span className="rounded-full bg-primary/70 px-3 py-1 text-center font-body-md text-body-md font-medium text-on-primary backdrop-blur-sm transition-colors group-hover:bg-secondary group-hover:text-on-secondary">
                     {category.nameTh ?? category.name}
                   </span>
                 </div>

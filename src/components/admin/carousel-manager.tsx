@@ -44,6 +44,25 @@ function toEdit(s: CarouselSlide): EditSlide {
   };
 }
 
+/** Hero banners are a fixed 3:1 aspect ratio. Read an uploaded file's natural
+ *  aspect so we can warn when it's far from 3:1 (it would get cropped). */
+function readImageAspect(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(3);
+    const url = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img.naturalHeight ? img.naturalWidth / img.naturalHeight : 3);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(3);
+    };
+    img.src = url;
+  });
+}
+
 export function CarouselManager({
   initial,
   products,
@@ -56,6 +75,7 @@ export function CarouselManager({
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [pickProduct, setPickProduct] = useState("");
+  const [aspectWarning, setAspectWarning] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -70,11 +90,7 @@ export function CarouselManager({
     if (!s.id) return true; // newly added, not yet saved
     const o = origById.get(s.id);
     if (!o) return true;
-    return (
-      o.title !== s.title ||
-      o.subtitle !== s.subtitle ||
-      o.linkProductId !== s.linkProductId
-    );
+    return o.title !== s.title || o.linkProductId !== s.linkProductId;
   }
 
   const orderChanged = useMemo(() => {
@@ -96,7 +112,12 @@ export function CarouselManager({
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     setUploading(true);
+    setAspectWarning(null);
+    const offRatio: string[] = [];
     for (const file of files) {
+      const ratio = await readImageAspect(file);
+      // 3:1 target; flag anything outside ~2.7:1–3.3:1.
+      if (Math.abs(ratio - 3) > 0.3) offRatio.push(`${file.name} (${ratio.toFixed(2)}:1)`);
       const upload = await compressImage(file);
       const fd = new FormData();
       fd.set("file", upload);
@@ -120,6 +141,11 @@ export function CarouselManager({
       }
     }
     setUploading(false);
+    if (offRatio.length) {
+      setAspectWarning(
+        `รูปต่อไปนี้อัตราส่วนไม่ใกล้ 3:1 อาจถูกตัดบนแบนเนอร์: ${offRatio.join(", ")}`,
+      );
+    }
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -149,9 +175,9 @@ export function CarouselManager({
     setSlides(next);
   }
 
-  function handleField(key: string, field: "title" | "subtitle", value: string) {
+  function handleTitle(key: string, value: string) {
     setSlides((prev) =>
-      prev.map((s) => (s.key === key ? { ...s, [field]: value } : s)),
+      prev.map((s) => (s.key === key ? { ...s, title: value } : s)),
     );
   }
 
@@ -280,7 +306,7 @@ export function CarouselManager({
                           {slide.productId ? (
                             <div className="flex min-w-0 flex-col gap-1">
                               <span className="font-label-caps text-label-caps text-on-surface-variant">
-                                หัวข้อ (ชื่อสินค้า — แก้ไขไม่ได้)
+                                คำอธิบายรูป (ใช้ชื่อสินค้า — แก้ไขไม่ได้)
                               </span>
                               <div className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface-container px-3 py-2 font-body-sm text-body-sm text-on-surface-variant">
                                 <Icon name="lock" className="flex-none text-base" />
@@ -288,19 +314,21 @@ export function CarouselManager({
                               </div>
                             </div>
                           ) : (
-                            <input
-                              value={slide.title ?? ""}
-                              onChange={(e) => handleField(slide.key, "title", e.target.value)}
-                              placeholder="หัวข้อ (title)"
-                              className="w-full min-w-0 rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
-                            />
+                            <div className="flex min-w-0 flex-col gap-1">
+                              <label className="font-label-caps text-label-caps text-on-surface-variant">
+                                Alt text / คำอธิบายรูปภาพ
+                              </label>
+                              <input
+                                value={slide.title ?? ""}
+                                onChange={(e) => handleTitle(slide.key, e.target.value)}
+                                placeholder="เช่น โปรโมชั่นรอกรุ่นใหม่ ลด 20%"
+                                className="w-full min-w-0 rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
+                              />
+                              <span className="font-body-sm text-body-sm text-on-surface-variant">
+                                คำอธิบายสำหรับ screen reader และ SEO (ไม่แสดงบนหน้าเว็บ) — แนะนำให้ใส่
+                              </span>
+                            </div>
                           )}
-                          <input
-                            value={slide.subtitle ?? ""}
-                            onChange={(e) => handleField(slide.key, "subtitle", e.target.value)}
-                            placeholder="คำบรรยาย (subtitle) — เว้นว่างได้"
-                            className="w-full min-w-0 rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
-                          />
                           <ProductTextCombobox
                             products={products}
                             value={slide.linkProductId ?? ""}
@@ -326,11 +354,32 @@ export function CarouselManager({
         </Droppable>
       </DragDropContext>
 
-      <p className="mb-3 font-body-sm text-body-sm text-on-surface-variant">
-        ลากเพื่อเรียงลำดับ — สไลด์จากสินค้าจะใช้รูปหลักและชื่อสินค้าเป็นหัวข้อ (แก้ไขคำบรรยายได้)
-        เลือก &quot;สินค้าที่เชื่อมโยง&quot; เพื่อกำหนดว่าคลิกสไลด์แล้วจะไปหน้าสินค้าใด
-        การเพิ่ม ลบ และจัดลำดับจะมีผลเมื่อกด &quot;บันทึกการเปลี่ยนแปลง&quot; เท่านั้น
-      </p>
+      <div className="mb-3 flex items-start gap-2 rounded-lg border border-outline-variant bg-surface-container px-3 py-2">
+        <Icon name="info" className="mt-0.5 flex-none text-base text-secondary" />
+        <p className="font-body-sm text-body-sm text-on-surface-variant">
+          แบนเนอร์เป็นรูปล้วน (ไม่มีหัวข้อ/คำบรรยายซ้อนทับ) — ออกแบบข้อความทั้งหมดลงในรูปเลย
+          ใช้อัตราส่วน <strong>3:1</strong> (เช่น <strong>1536×512 px</strong> หรือใหญ่กว่า) และเก็บข้อความสำคัญไว้กลางภาพ
+          ในขอบเขตปลอดภัย เพื่อไม่ให้ถูกตัดบนจอแคบ (รูปแสดงเต็มความกว้างบนมือถือ/แท็บเล็ต)
+          <br />
+          ลากเพื่อเรียงลำดับ — เลือก &quot;สินค้าที่เชื่อมโยง&quot; เพื่อกำหนดปลายทางเมื่อคลิกสไลด์
+          การเพิ่ม ลบ และจัดลำดับจะมีผลเมื่อกด &quot;บันทึกการเปลี่ยนแปลง&quot; เท่านั้น
+        </p>
+      </div>
+
+      {aspectWarning && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-error/40 bg-error-container/20 px-3 py-2">
+          <Icon name="warning" className="mt-0.5 flex-none text-base text-error" />
+          <p className="flex-1 font-body-sm text-body-sm text-error">{aspectWarning}</p>
+          <button
+            type="button"
+            onClick={() => setAspectWarning(null)}
+            aria-label="ปิด"
+            className="flex-none text-error transition-opacity hover:opacity-70"
+          >
+            <Icon name="close" className="text-base" />
+          </button>
+        </div>
+      )}
 
       {/* Add controls — one merged cell: product picker + add + upload (icon) */}
       <ProductImagePicker

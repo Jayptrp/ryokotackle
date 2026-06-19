@@ -143,31 +143,17 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
         onTransitionEnd={handleTransitionEnd}
       >
         {extended.map((slide, i) => {
+          // Image-only slides: the admin bakes any text/detail into the image
+          // itself, so there's no title/subtitle/gradient overlay here.
           const content = (
-            <>
-              <Image
-                src={slide.imageUrl}
-                alt={slide.title ?? ""}
-                fill
-                priority={loop ? i === 1 : i === 0}
-                className="object-cover"
-                unoptimized
-              />
-              <div className="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-primary/70 to-transparent pb-stack-sm md:pb-stack-lg">
-                <div className="mb-1 w-full px-6 md:mb-stack-lg md:px-10">
-                  {slide.title && (
-                    <h2 className="max-w-xl font-headline-lg text-headline-sm text-on-primary md:text-headline-lg">
-                      {slide.title}
-                    </h2>
-                  )}
-                  {slide.subtitle && (
-                    <p className="mt-0.5 max-w-lg font-body-lg text-body-sm text-on-primary/80 md:mt-stack-sm md:text-body-lg">
-                      {slide.subtitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </>
+            <Image
+              src={slide.imageUrl}
+              alt={slide.title ?? ""}
+              fill
+              priority={loop ? i === 1 : i === 0}
+              className="object-cover"
+              unoptimized
+            />
           );
           const slideClassName = "relative h-full w-full shrink-0";
           // Clones share ids with real slides, so key by track position.
