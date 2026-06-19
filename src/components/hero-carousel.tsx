@@ -20,6 +20,7 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
   const [pos, setPos] = useState(loop ? 1 : 0);
   const [animate, setAnimate] = useState(true);
   const [paused, setPaused] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   const realIndex = loop ? (((pos - 1) % n) + n) % n : pos;
 
@@ -98,10 +99,29 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
   // Auto-advance every 5s. Pauses while hovered/touched; `pos` in the deps means
   // any manual navigation (arrows/dots/swipe) restarts the countdown.
   useEffect(() => {
-    if (!loop || paused) return;
+    if (!loop || paused || hidden) return;
     const timer = setInterval(next, 5000);
     return () => clearInterval(timer);
-  }, [loop, paused, pos, next]);
+  }, [loop, paused, hidden, pos, next]);
+
+  // Background tabs don't run CSS transitions / fire transitionend, so the loop
+  // snap can't happen — without pausing, the timer would march `pos` off the end
+  // of the track into the empty container background. Pause while hidden, and on
+  // return snap (no animation) back to the current real slide.
+  useEffect(() => {
+    const onVisibility = () => {
+      const isHidden = document.hidden;
+      setHidden(isHidden);
+      if (!isHidden && loop) {
+        clearTimeout(lockTimer.current);
+        sliding.current = false;
+        setAnimate(false);
+        setPos((p) => ((((p - 1) % n) + n) % n) + 1);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [loop, n]);
 
   // Touch swipe: commit on release when the horizontal drag passes a threshold.
   const touchStartX = useRef(0);
