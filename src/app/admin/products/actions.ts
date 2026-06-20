@@ -289,6 +289,7 @@ export async function saveProductAll(formData: FormData) {
   const mediaCurrent: PendingMedia[] = JSON.parse((formData.get("media_current") as string) || "[]");
   const mediaDeleted: { id: string; url: string }[] = JSON.parse((formData.get("media_deleted") as string) || "[]");
   const channels: { channel: string; url: string }[] = JSON.parse((formData.get("channels_json") as string) || "[]");
+  const warrantyIds: string[] = JSON.parse((formData.get("warranties_json") as string) || "[]");
 
   if (!name) return;
 
@@ -367,6 +368,14 @@ export async function saveProductAll(formData: FormData) {
       .filter((c) => c.channel && c.url)
       .map((c, i) => ({ product_id: productId!, channel: c.channel as never, url: c.url, sort_order: i }));
     if (channelRows.length) await supabase.from("product_channels").insert(channelRows);
+
+    // Save warranty tags (delete-all + re-insert)
+    await supabase.from("product_warranties").delete().eq("product_id", productId!);
+    const warrantyRows = warrantyIds.map((warranty_id) => ({
+      product_id: productId!,
+      warranty_id,
+    }));
+    if (warrantyRows.length) await supabase.from("product_warranties").insert(warrantyRows);
   }
 
   revalidatePath("/products");

@@ -267,6 +267,39 @@ export type Database = {
           },
         ]
       }
+      product_warranties: {
+        Row: {
+          created_at: string
+          product_id: string
+          warranty_id: string
+        }
+        Insert: {
+          created_at?: string
+          product_id: string
+          warranty_id: string
+        }
+        Update: {
+          created_at?: string
+          product_id?: string
+          warranty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_warranties_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_warranties_warranty_id_fkey"
+            columns: ["warranty_id"]
+            isOneToOne: false
+            referencedRelation: "warranties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand_id: string | null
@@ -332,6 +365,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      warranties: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      warranty_page: {
+        Row: {
+          id: number
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

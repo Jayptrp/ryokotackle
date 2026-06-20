@@ -31,6 +31,12 @@ interface ProductData {
   isFeatured: boolean;
   media: ProductMedia[];
   channels: ChannelRow[];
+  warrantyIds: string[];
+}
+
+interface WarrantyOption {
+  id: string;
+  name: string;
 }
 
 interface Props {
@@ -38,6 +44,7 @@ interface Props {
   pageError?: string;
   product: ProductData | null;
   categories: CategoryOption[];
+  warranties: WarrantyOption[];
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -52,6 +59,12 @@ function isMediaDirty(items: PendingMedia[], original: ProductMedia[]): boolean 
 function isChannelsEqual(a: ChannelRow[], b: ChannelRow[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((r, i) => r.channel === b[i].channel && r.url === b[i].url);
+}
+
+function isSetEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(b);
+  return a.every((x) => set.has(x));
 }
 
 /** Red border + ring when a field has been modified. */
@@ -110,7 +123,7 @@ function SectionBlock({
 
 // ── ProductEditor ─────────────────────────────────────────────────────────────
 
-export function ProductEditor({ isNew, pageError, product, categories }: Props) {
+export function ProductEditor({ isNew, pageError, product, categories, warranties }: Props) {
   const [isPending, startTransition] = useTransition();
 
   // ── controlled field state ────────────────────────────────────────────────
@@ -129,6 +142,7 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
 
   const [mediaItems, setMediaItems] = useState<PendingMedia[]>(product?.media ?? []);
   const [channels, setChannels] = useState<ChannelRow[]>(initialChannels);
+  const [warrantyIds, setWarrantyIds] = useState<string[]>(product?.warrantyIds ?? []);
 
   // Keys to force-remount components that manage their own internal state
   const [nameKey, setNameKey] = useState(0);
@@ -146,6 +160,7 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
     description: product?.description ?? "",
     media: product?.media ?? [] as ProductMedia[],
     channels: initialChannels,
+    warrantyIds: product?.warrantyIds ?? [],
   });
 
   // ── per-section dirty flags (computed, no useState needed) ────────────────
@@ -159,6 +174,7 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
     description: description !== (orig.current.description ?? ""),
     media: isMediaDirty(mediaItems, orig.current.media),
     channels: !isChannelsEqual(channels, orig.current.channels),
+    warranties: !isSetEqual(warrantyIds, orig.current.warrantyIds),
   };
 
   const sectionDirty = {
@@ -167,6 +183,7 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
     summary: d.summary,
     channels: d.channels,
     description: d.description,
+    warranties: d.warranties,
   };
 
   const isDirty = Object.values(sectionDirty).some(Boolean);
@@ -190,6 +207,14 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
   function revertChannels() {
     setChannels(orig.current.channels);
   }
+  function revertWarranties() {
+    setWarrantyIds(orig.current.warrantyIds);
+  }
+  function toggleWarranty(id: string) {
+    setWarrantyIds((ids) =>
+      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
+    );
+  }
   function revertDescription() {
     setDescription(orig.current.description ?? "");
     setDescriptionKey((k) => k + 1); // remount Tiptap with original content
@@ -207,6 +232,7 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
       ),
     );
     fd.set("channels_json", JSON.stringify(channels));
+    fd.set("warranties_json", JSON.stringify(warrantyIds));
     startTransition(async () => { await saveProductAll(fd); });
   }
 
@@ -383,6 +409,46 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
             </SectionBlock>
           )}
         </div>
+
+        {/* ── การรับประกัน ──────────────────────────────── */}
+        {!isNew && product && (
+          <SectionBlock
+            title="การรับประกัน"
+            subtitle="เลือกประเภทการรับประกันของสินค้านี้ — แสดงเป็นแท็กในหน้าสินค้า (ถ้าไม่เลือกจะแสดงให้ติดต่อสอบถาม)"
+            isDirty={sectionDirty.warranties}
+            onRevert={revertWarranties}
+          >
+            {warranties.length === 0 ? (
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                ยังไม่มีประเภทการรับประกัน —{" "}
+                <Link href="/admin/warranty" className="text-primary hover:underline">
+                  เพิ่มได้ที่หน้าการรับประกัน
+                </Link>
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {warranties.map((w) => {
+                  const selected = warrantyIds.includes(w.id);
+                  return (
+                    <button
+                      key={w.id}
+                      type="button"
+                      onClick={() => toggleWarranty(w.id)}
+                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 font-label-caps text-label-caps transition-colors ${
+                        selected
+                          ? "border-primary bg-primary text-on-primary"
+                          : "border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      <Icon name={selected ? "check" : "add"} className="text-base" />
+                      {w.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </SectionBlock>
+        )}
 
         {/* ── รายละเอียดสินค้า ──────────────────────────── */}
         {!isNew && product && (

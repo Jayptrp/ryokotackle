@@ -8,6 +8,7 @@ import type {
   Product,
   ProductListItem,
   ProductQuery,
+  Warranty,
 } from "@/lib/types";
 
 export const DEFAULT_PAGE_SIZE = 24;
@@ -251,7 +252,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
+      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, sort_order))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -308,6 +309,11 @@ export async function getProductBySlug(
         sortOrder: c.sort_order,
       }))
       .sort((a: any, b: any) => a.sortOrder - b.sortOrder),
+    warranties: (row.warranties ?? [])
+      .map((w: any) => w.warranty)
+      .filter(Boolean)
+      .sort((a: any, b: any) => a.sort_order - b.sort_order)
+      .map((w: any) => ({ id: w.id, name: w.name })),
   };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }
@@ -382,4 +388,38 @@ export async function getPageBySlug(slug: string): Promise<PageContent | null> {
     .maybeSingle();
   if (!data) return null;
   return { title: data.title, titleTh: data.title_th, content: data.content };
+}
+
+/* -------------------------------------------------------------- warranties */
+
+/** All warranty types in display order (admin-editable). */
+export async function getWarranties(): Promise<Warranty[]> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("warranties")
+    .select("id, name, detail, sort_order")
+    .order("sort_order");
+  return (data ?? []).map((w) => ({
+    id: w.id,
+    name: w.name,
+    detail: w.detail,
+    sortOrder: w.sort_order,
+  }));
+}
+
+/** Title + subtitle for the public warranty page (singleton, with fallbacks). */
+export async function getWarrantyPage(): Promise<{
+  title: string;
+  subtitle: string;
+}> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("warranty_page")
+    .select("title, subtitle")
+    .eq("id", 1)
+    .maybeSingle();
+  return {
+    title: data?.title?.trim() || "การรับประกันและการเคลมสินค้า",
+    subtitle: data?.subtitle?.trim() || "",
+  };
 }

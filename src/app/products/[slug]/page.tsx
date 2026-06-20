@@ -189,6 +189,30 @@ export default async function ProductDetailPage({
                 {product.name}
               </p>
             )}
+
+            {/* Warranty tags — fall back to a "contact us" chip when none assigned */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {product.warranties.length > 0 ? (
+                product.warranties.map((w) => (
+                  <Link
+                    key={w.id}
+                    href="/warranty"
+                    className="inline-flex items-center gap-1 rounded-full border border-secondary/40 bg-secondary-container/40 px-3 py-1 font-label-caps text-label-caps text-on-secondary-container transition-colors hover:bg-secondary-container"
+                  >
+                    <Icon name="verified_user" className="text-[14px]" />
+                    {w.name}
+                  </Link>
+                ))
+              ) : (
+                <Link
+                  href="/warranty"
+                  className="inline-flex items-center gap-1 rounded-full border border-outline-variant px-3 py-1 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                >
+                  <Icon name="help" className="text-[14px]" />
+                  สอบถามข้อมูลการรับประกัน
+                </Link>
+              )}
+            </div>
             {product.summary && (
               <p className="mt-4 font-body-lg text-body-lg text-on-surface-variant">
                 {product.summary}

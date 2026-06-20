@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCategories } from "@/lib/queries";
+import { getCategories, getWarranties } from "@/lib/queries";
 import { ProductEditor } from "@/components/admin/product-editor";
 import type { ProductMedia } from "@/lib/types";
 import type { ChannelRow } from "@/components/admin/channel-manager";
@@ -19,27 +19,30 @@ export default async function ProductEditorPage({
   const isNew = id === "new";
 
   const supabase = await createAdminClient();
-  const categories = await getCategories();
+  const [categories, warranties] = await Promise.all([
+    getCategories(),
+    getWarranties(),
+  ]);
 
   let product: {
     id: string; slug: string; name: string; nameTh: string | null;
     summary: string | null; description: string | null;
     categoryId: string | null; status: string; isFeatured: boolean;
-    media: ProductMedia[]; channels: ChannelRow[];
+    media: ProductMedia[]; channels: ChannelRow[]; warrantyIds: string[];
   } | null = null;
 
   if (!isNew) {
     const { data } = await supabase
       .from("products")
       .select(
-        "id, slug, name, name_th, summary, description, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
+        "id, slug, name, name_th, summary, description, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty_id)",
       )
       .eq("id", id)
       .maybeSingle();
 
     if (!data) notFound();
 
-    const raw = data as typeof data & { media: never[]; channels: never[] };
+    const raw = data as typeof data & { media: never[]; channels: never[]; warranties: never[] };
 
     product = {
       id: raw.id,
@@ -51,6 +54,9 @@ export default async function ProductEditorPage({
       categoryId: raw.category_id,
       status: raw.status,
       isFeatured: raw.is_featured ?? false,
+      warrantyIds: (raw.warranties ?? []).map(
+        (w: never) => (w as { warranty_id: string }).warranty_id,
+      ),
       media: (raw.media ?? [])
         .sort((a: never, b: never) => (a as { sort_order: number }).sort_order - (b as { sort_order: number }).sort_order)
         .map((m: never) => {
@@ -81,12 +87,15 @@ export default async function ProductEditorPage({
     parentSlug: c.parentSlug ?? null,
   }));
 
+  const warrantyOptions = warranties.map((w) => ({ id: w.id, name: w.name }));
+
   return (
     <ProductEditor
       isNew={isNew}
       pageError={pageError}
       product={product}
       categories={categoryOptions}
+      warranties={warrantyOptions}
     />
   );
 }

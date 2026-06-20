@@ -44,73 +44,11 @@ export default function ContactPage() {
         </Container>
       </section>
 
-      {/* Split layout */}
+      {/* Contact info */}
       <section className="py-stack-lg">
         <Container>
-          <div className="grid grid-cols-1 gap-section-gap lg:grid-cols-2">
-            {/* Contact form */}
-            <div className="space-y-stack-lg">
-              <div className="space-y-2">
-                <h2 className="font-headline-md text-headline-md text-primary">
-                  ส่งข้อความถึงเรา
-                </h2>
-                <div className="h-1 w-12 bg-tertiary-container" />
-              </div>
-              <form className="space-y-stack-md">
-                <div className="grid grid-cols-1 gap-gutter md:grid-cols-2">
-                  <div className="space-y-base">
-                    <label className="font-label-caps text-label-caps text-on-surface-variant">
-                      ชื่อ-นามสกุล
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="ระบุชื่อของคุณ"
-                      className="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div className="space-y-base">
-                    <label className="font-label-caps text-label-caps text-on-surface-variant">
-                      อีเมล
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="example@email.com"
-                      className="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-base">
-                  <label className="font-label-caps text-label-caps text-on-surface-variant">
-                    หัวข้อ
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="ระบุหัวข้อที่ต้องการติดต่อ"
-                    className="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  />
-                </div>
-                <div className="space-y-base">
-                  <label className="font-label-caps text-label-caps text-on-surface-variant">
-                    ข้อความ
-                  </label>
-                  <textarea
-                    rows={5}
-                    placeholder="พิมพ์ข้อความของคุณที่นี่..."
-                    className="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-primary px-12 py-4 font-label-caps text-label-caps text-white shadow-sm transition-all duration-300 hover:bg-primary-container hover:shadow-md"
-                >
-                  ส่งข้อความ
-                </button>
-              </form>
-            </div>
-
-            {/* Contact info */}
-            <div className="space-y-section-gap">
-              <div className="grid grid-cols-1 gap-gutter sm:grid-cols-2">
+          <div className="space-y-section-gap">
+              <div className="grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-4">
                 {INFO_CARDS.map((card) => (
                   <div
                     key={card.label}
@@ -166,7 +104,6 @@ export default function ContactPage() {
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </Container>
       </section>

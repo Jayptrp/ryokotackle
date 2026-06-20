@@ -156,6 +156,10 @@ Supabase-Auth-gated UI for the 1–2 admins.
   Actions auto-slug + `revalidatePath` the public pages. Descriptions are sanitized on
   render (`src/components/rich-content.tsx`).
 - **To become an admin:** insert your `auth.users` id into the `admin_users` table.
+- **Editor UX pattern:** all admin editors use one model — deferred/unified save,
+  computed dirty state vs a `useRef` snapshot, per-section revert, drag-and-drop lists.
+  See **[docs/admin-editor-pattern.md](./docs/admin-editor-pattern.md)** before building
+  or changing an admin editor.
 
 ## Legacy import
 

@@ -49,6 +49,15 @@ export interface CarouselSlide {
   linkProductSlug: string | null;
 }
 
+/** A warranty type — doubles as a product tag and carries the detail shown on
+ * the public warranty page. */
+export interface Warranty {
+  id: string;
+  name: string;
+  detail: string | null;
+  sortOrder: number;
+}
+
 export interface ProductMedia {
   id: string;
   type: MediaType;
@@ -92,6 +101,8 @@ export interface Product {
   category: Category | null;
   media: ProductMedia[];
   channels: ProductChannel[];
+  /** Warranty tags assigned to this product (0..n). */
+  warranties: Pick<Warranty, "id" | "name">[];
 }
 
 export interface ProductQuery {
