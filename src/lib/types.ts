@@ -106,7 +106,7 @@ export interface Product {
   media: ProductMedia[];
   channels: ProductChannel[];
   /** Warranty tags assigned to this product (0..n). */
-  warranties: Pick<Warranty, "id" | "name">[];
+  warranties: Pick<Warranty, "id" | "name" | "icon" | "color">[];
 }
 
 export interface ProductQuery {

@@ -252,7 +252,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, sort_order))",
+      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, icon, color, sort_order))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -313,7 +313,7 @@ export async function getProductBySlug(
       .map((w: any) => w.warranty)
       .filter(Boolean)
       .sort((a: any, b: any) => a.sort_order - b.sort_order)
-      .map((w: any) => ({ id: w.id, name: w.name })),
+      .map((w: any) => ({ id: w.id, name: w.name, icon: w.icon, color: w.color })),
   };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }

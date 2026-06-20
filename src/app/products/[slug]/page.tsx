@@ -11,6 +11,7 @@ import { JsonLd } from "@/components/json-ld";
 import { CHANNEL_META } from "@/lib/channels";
 import { getProductBySlug, getPublishedSlugs } from "@/lib/queries";
 import { SITE_NAME, absoluteUrl } from "@/lib/seo";
+import { warrantyBadgeCls } from "@/lib/warranty-style";
 
 /** Strip HTML tags + clamp to a meta-description-friendly length. */
 function toMetaDescription(html: string, max = 160): string {
@@ -197,9 +198,9 @@ export default async function ProductDetailPage({
                   <Link
                     key={w.id}
                     href="/warranty"
-                    className="inline-flex items-center gap-1 rounded-full border border-secondary/40 bg-secondary-container/40 px-3 py-1 font-label-caps text-label-caps text-on-secondary-container transition-colors hover:bg-secondary-container"
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 font-label-caps text-label-caps transition-opacity hover:opacity-80 ${warrantyBadgeCls(w.color)}`}
                   >
-                    <Icon name="verified_user" className="text-[14px]" />
+                    <Icon name={w.icon} className="text-[14px]" />
                     {w.name}
                   </Link>
                 ))
