@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
+import { BrandIcon } from "@/components/brand-icon";
 import { ProductGallery } from "@/components/product-gallery";
 import { RichContent } from "@/components/rich-content";
 import { ScrollToButton } from "@/components/scroll-to-button";
@@ -213,8 +214,9 @@ export default async function ProductDetailPage({
                       style={{ backgroundColor: meta.color }}
                       className="group flex items-center gap-2 rounded-lg px-5 py-3 font-label-caps text-label-caps text-white shadow-sm transition-all hover:opacity-90"
                     >
-                      <Icon
-                        name={meta.icon}
+                      <BrandIcon
+                        name={ch.channel}
+                        fallback={meta.icon}
                         className="text-xl transition-transform group-hover:scale-110"
                       />
                       {meta.label}

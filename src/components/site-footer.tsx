@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Container } from "@/components/container";
-import { Icon } from "@/components/icon";
+import { BrandIcon } from "@/components/brand-icon";
 import { COMPANY, SITE_NAME } from "@/lib/seo";
 
 const FOOTER_LINKS = [
@@ -10,10 +10,10 @@ const FOOTER_LINKS = [
 ] as const;
 
 const SOCIAL = [
-  { href: "https://www.facebook.com/ryoko.tackle", label: "Facebook", icon: "thumb_up" },
-  { href: "https://www.tiktok.com/@ryoko.tackle", label: "TikTok", icon: "music_note" },
-  { href: "https://www.youtube.com/@ryoko.tackle", label: "YouTube", icon: "play_circle" },
-  { href: "https://www.instagram.com/ryoko.tackle", label: "Instagram", icon: "photo_camera" },
+  { href: "https://www.facebook.com/ryoko.tackle", label: "Facebook", brand: "facebook" },
+  { href: "https://www.tiktok.com/@ryoko.tackle", label: "TikTok", brand: "tiktok" },
+  { href: "https://www.youtube.com/@ryoko.tackle", label: "YouTube", brand: "youtube" },
+  { href: "https://www.instagram.com/ryoko.tackle", label: "Instagram", brand: "instagram" },
 ] as const;
 
 export function SiteFooter() {
@@ -89,7 +89,7 @@ export function SiteFooter() {
                 aria-label={s.label}
                 className="text-on-surface-variant transition-colors hover:text-primary"
               >
-                <Icon name={s.icon} />
+                <BrandIcon name={s.brand} className="text-xl" />
               </a>
             ))}
           </div>

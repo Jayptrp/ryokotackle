@@ -179,6 +179,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Disable scroll anchoring: the shrink-on-scroll header changes height by more
+     than the hysteresis dead zone, and anchoring would re-adjust the scroll
+     position back across the threshold, making the header rapidly flip states. */
+  html,
+  body {
+    overflow-anchor: none;
+  }
   body {
     @apply bg-background text-on-background;
     font-family: var(--font-sans);
