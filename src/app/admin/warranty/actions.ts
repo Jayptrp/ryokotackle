@@ -10,6 +10,8 @@ export interface WarrantyInput {
   id: string | null;
   name: string;
   detail: string;
+  icon: string;
+  color: string;
 }
 
 /**
@@ -41,14 +43,16 @@ export async function saveWarranties(input: {
       const sortOrder = (i + 1) * 10;
       const name = w.name.trim();
       const detail = w.detail.trim() || null;
+      const icon = w.icon.trim() || "verified_user";
+      const color = w.color.trim() || "blue";
       if (w.id === null) {
         return supabase
           .from("warranties")
-          .insert({ name, detail, sort_order: sortOrder });
+          .insert({ name, detail, icon, color, sort_order: sortOrder });
       }
       return supabase
         .from("warranties")
-        .update({ name, detail, sort_order: sortOrder })
+        .update({ name, detail, icon, color, sort_order: sortOrder })
         .eq("id", w.id);
     }),
   );

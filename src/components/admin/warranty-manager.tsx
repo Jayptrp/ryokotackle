@@ -10,6 +10,11 @@ import {
 import { saveWarranties } from "@/app/admin/warranty/actions";
 import { Icon } from "@/components/icon";
 import type { Warranty } from "@/lib/types";
+import {
+  WARRANTY_COLORS,
+  WARRANTY_ICONS,
+  warrantyBadgeCls,
+} from "@/lib/warranty-style";
 
 interface Row {
   /** Stable client key (survives reorder); not the DB id. */
@@ -18,6 +23,8 @@ interface Row {
   id: string | null;
   name: string;
   detail: string;
+  icon: string;
+  color: string;
 }
 
 let keySeq = 0;
@@ -29,6 +36,8 @@ function toRows(warranties: Warranty[]): Row[] {
     id: w.id,
     name: w.name,
     detail: w.detail ?? "",
+    icon: w.icon,
+    color: w.color,
   }));
 }
 
@@ -99,29 +108,42 @@ export function WarrantyManager({ initial, initialPage }: Props) {
   const [subtitle, setSubtitle] = useState(initialPage.subtitle);
 
   // Original snapshot (keyed by client key) for per-field/section dirty tracking.
+  const snapshot = (rs: Row[]) => ({
+    rows: rs.map((r) => ({ ...r })),
+    rowsByKey: new Map(
+      rs.map((r) => [r.key, { name: r.name, detail: r.detail, icon: r.icon, color: r.color }]),
+    ),
+    keys: rs.map((r) => r.key),
+  });
+
   const orig = useRef({
-    rows: rows.map((r) => ({ key: r.key, id: r.id, name: r.name, detail: r.detail })),
-    rowsByKey: new Map(rows.map((r) => [r.key, { name: r.name, detail: r.detail }])),
-    keys: rows.map((r) => r.key),
+    ...snapshot(rows),
     title: initialPage.title,
     subtitle: initialPage.subtitle,
   });
 
   const rowDirty = (r: Row) => {
     const o = orig.current.rowsByKey.get(r.key);
-    if (!o) return { name: true, detail: true }; // newly added
-    return { name: r.name !== o.name, detail: r.detail !== o.detail };
+    if (!o) return { name: true, detail: true, style: true }; // newly added
+    return {
+      name: r.name !== o.name,
+      detail: r.detail !== o.detail,
+      style: r.icon !== o.icon || r.color !== o.color,
+    };
   };
 
   const orderChanged =
     rows.length !== orig.current.keys.length ||
     rows.some((r, i) => r.key !== orig.current.keys[i]);
 
-  // Section 1 owns: membership (add/delete), order, and names.
+  // Section 1 owns: membership (add/delete), order, names, and badge style.
   const typesDirty =
     orderChanged ||
     deletedIds.length > 0 ||
-    rows.some((r) => rowDirty(r).name);
+    rows.some((r) => {
+      const d = rowDirty(r);
+      return d.name || d.style;
+    });
 
   // Section 2 owns: page title/subtitle, and each type's detail.
   const contentDirty =
@@ -136,7 +158,10 @@ export function WarrantyManager({ initial, initialPage }: Props) {
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }
   function addRow() {
-    setRows((rs) => [...rs, { key: nextKey(), id: null, name: "", detail: "" }]);
+    setRows((rs) => [
+      ...rs,
+      { key: nextKey(), id: null, name: "", detail: "", icon: "verified_user", color: "blue" },
+    ]);
   }
   function removeRow(key: string) {
     setRows((rs) => {
@@ -155,8 +180,8 @@ export function WarrantyManager({ initial, initialPage }: Props) {
     });
   }
 
-  // Revert section 1 only: restore original membership/order/names, but keep any
-  // detail edits the admin made to surviving rows (those belong to section 2).
+  // Revert section 1 only: restore original membership/order/names/badge style,
+  // but keep any detail edits the admin made to surviving rows (section 2's).
   function revertTypes() {
     const detailNow = new Map(rows.map((r) => [r.key, r.detail]));
     setRows(
@@ -164,6 +189,8 @@ export function WarrantyManager({ initial, initialPage }: Props) {
         key: o.key,
         id: o.id,
         name: o.name,
+        icon: o.icon,
+        color: o.color,
         detail: detailNow.has(o.key) ? detailNow.get(o.key)! : o.detail,
       })),
     );
@@ -191,19 +218,19 @@ export function WarrantyManager({ initial, initialPage }: Props) {
     startTransition(async () => {
       const fresh = await saveWarranties({
         page: { title, subtitle },
-        warranties: rows.map((r) => ({ id: r.id, name: r.name, detail: r.detail })),
+        warranties: rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          detail: r.detail,
+          icon: r.icon,
+          color: r.color,
+        })),
         deletedIds,
       });
       const newRows = toRows(fresh);
       setRows(newRows);
       setDeletedIds([]);
-      orig.current = {
-        rows: newRows.map((r) => ({ key: r.key, id: r.id, name: r.name, detail: r.detail })),
-        rowsByKey: new Map(newRows.map((r) => [r.key, { name: r.name, detail: r.detail }])),
-        keys: newRows.map((r) => r.key),
-        title,
-        subtitle,
-      };
+      orig.current = { ...snapshot(newRows), title, subtitle };
     });
   }
 
@@ -260,12 +287,43 @@ export function WarrantyManager({ initial, initialPage }: Props) {
                           >
                             <Icon name="drag_indicator" />
                           </div>
+                          {/* Live preview of the chosen icon + color */}
+                          <span
+                            className={`flex h-9 w-9 flex-none items-center justify-center rounded-full ${warrantyBadgeCls(r.color)}`}
+                            title="ตัวอย่างไอคอน"
+                          >
+                            <Icon name={r.icon} className="text-lg" />
+                          </span>
                           <input
                             value={r.name}
                             onChange={(e) => updateRow(r.key, { name: e.target.value })}
                             placeholder="ชื่อประเภทการรับประกัน"
-                            className={`flex-1 rounded-lg border bg-white px-4 py-2.5 font-body-md text-body-md outline-none ${inputCls(d.name)}`}
+                            className={`min-w-0 flex-1 rounded-lg border bg-white px-4 py-2.5 font-body-md text-body-md outline-none ${inputCls(d.name)}`}
                           />
+                          <select
+                            value={r.icon}
+                            onChange={(e) => updateRow(r.key, { icon: e.target.value })}
+                            title="ไอคอน"
+                            className={`w-32 flex-none rounded-lg border bg-white px-2 py-2.5 font-body-sm text-body-sm outline-none ${inputCls(d.style)}`}
+                          >
+                            {WARRANTY_ICONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={r.color}
+                            onChange={(e) => updateRow(r.key, { color: e.target.value })}
+                            title="สี"
+                            className={`w-24 flex-none rounded-lg border bg-white px-2 py-2.5 font-body-sm text-body-sm outline-none ${inputCls(d.style)}`}
+                          >
+                            {Object.entries(WARRANTY_COLORS).map(([key, c]) => (
+                              <option key={key} value={key}>
+                                {c.label}
+                              </option>
+                            ))}
+                          </select>
                           <button
                             type="button"
                             onClick={() => removeRow(r.key)}

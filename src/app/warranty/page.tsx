@@ -3,22 +3,7 @@ import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { getWarranties, getWarrantyPage } from "@/lib/queries";
 import { SITE_NAME } from "@/lib/seo";
-
-/**
- * Per-type icon styling, matched by warranty name (normalized whitespace).
- * Unmapped types fall back to the default blue shield badge.
- */
-function warrantyIcon(name: string): { icon: string; wrapperCls: string } {
-  const key = name.replace(/\s+/g, " ").trim();
-  switch (key) {
-    case "ไม่มีประกัน / ไม่มีอะไหล่":
-      return { icon: "gpp_bad", wrapperCls: "bg-error-container text-error" };
-    case "ไม่มีประกัน / มีอะไหล่":
-      return { icon: "shield", wrapperCls: "bg-secondary-container text-on-secondary-container" };
-    default:
-      return { icon: "verified_user", wrapperCls: "bg-secondary-container text-on-secondary-container" };
-  }
-}
+import { warrantyBadgeCls } from "@/lib/warranty-style";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { title, subtitle } = await getWarrantyPage();
@@ -61,15 +46,14 @@ export default async function WarrantyPage() {
           ) : (
             <div className="grid grid-cols-1 gap-gutter md:grid-cols-2">
               {warranties.map((w) => {
-                const { icon, wrapperCls } = warrantyIcon(w.name);
                 return (
                 <div
                   key={w.id}
                   className="flex flex-col gap-stack-sm rounded-xl border border-outline-variant bg-gradient-to-br from-white to-surface-container-low p-stack-lg transition-shadow duration-300 hover:shadow-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-full ${wrapperCls}`}>
-                      <Icon name={icon} />
+                    <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-full ${warrantyBadgeCls(w.color)}`}>
+                      <Icon name={w.icon} />
                     </span>
                     <h2 className="font-headline-sm text-headline-sm text-primary">
                       {w.name}

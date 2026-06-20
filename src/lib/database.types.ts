@@ -368,24 +368,30 @@ export type Database = {
       }
       warranties: {
         Row: {
+          color: string
           created_at: string
           detail: string | null
+          icon: string
           id: string
           name: string
           sort_order: number
           updated_at: string
         }
         Insert: {
+          color?: string
           created_at?: string
           detail?: string | null
+          icon?: string
           id?: string
           name: string
           sort_order?: number
           updated_at?: string
         }
         Update: {
+          color?: string
           created_at?: string
           detail?: string | null
+          icon?: string
           id?: string
           name?: string
           sort_order?: number

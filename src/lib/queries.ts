@@ -397,12 +397,14 @@ export async function getWarranties(): Promise<Warranty[]> {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("warranties")
-    .select("id, name, detail, sort_order")
+    .select("id, name, detail, icon, color, sort_order")
     .order("sort_order");
   return (data ?? []).map((w) => ({
     id: w.id,
     name: w.name,
     detail: w.detail,
+    icon: w.icon,
+    color: w.color,
     sortOrder: w.sort_order,
   }));
 }

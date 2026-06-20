@@ -55,6 +55,10 @@ export interface Warranty {
   id: string;
   name: string;
   detail: string | null;
+  /** Material Symbols ligature for the badge icon. */
+  icon: string;
+  /** Color key from `src/lib/warranty-style.ts` (blue | red | navy | accent | neutral). */
+  color: string;
   sortOrder: number;
 }
 
