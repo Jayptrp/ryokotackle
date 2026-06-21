@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { createCategory } from "@/app/admin/products/actions";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 
 export interface CatOption {
@@ -11,6 +10,11 @@ export interface CatOption {
   parentSlug: string | null;
 }
 
+// Sentinels for not-yet-created categories. Kept in sync with the server's
+// resolveCategoryId in src/app/admin/products/actions.ts.
+const NEW_TOP = "__new_top__";
+const NEW_SUB = "__new_sub__";
+
 const selectCls =
   "w-full rounded-lg border border-outline-variant bg-white px-4 py-3 font-body-md text-body-md outline-none focus:border-primary disabled:bg-surface-container disabled:opacity-60";
 const addBtnCls =
@@ -19,6 +23,10 @@ const addBtnCls =
 /**
  * หมวดหมู่ (top) + หมวดหมู่ย่อย (sub) selectors with inline "add new". Submits a
  * single hidden `category_id` (the subcategory when chosen, otherwise the top).
+ *
+ * New categories are NOT written to the DB on click — they're staged locally and
+ * created by the product's unified save (resolveCategoryId). While staged, the
+ * effective id is a sentinel and the name travels in companion hidden inputs.
  */
 export function CategorySelect({
   categories,
@@ -29,8 +37,6 @@ export function CategorySelect({
   defaultCategoryId: string | null;
   onCategoryChange?: (id: string | null) => void;
 }) {
-  const [cats, setCats] = useState(categories);
-
   const initial = useMemo(() => {
     const cur = categories.find((c) => c.id === defaultCategoryId);
     if (!cur) return { top: "", sub: "" };
@@ -47,13 +53,16 @@ export function CategorySelect({
   const [addingSub, setAddingSub] = useState(false);
   const [newTop, setNewTop] = useState("");
   const [newSub, setNewSub] = useState("");
-  const [pending, startTransition] = useTransition();
+  // Staged (not-yet-saved) new category names.
+  const [pendingTop, setPendingTop] = useState<string | null>(null);
+  const [pendingSub, setPendingSub] = useState<string | null>(null);
 
-  const tops = useMemo(() => cats.filter((c) => !c.parentSlug), [cats]);
-  const topSlug = cats.find((c) => c.id === topId)?.slug ?? null;
+  const tops = useMemo(() => categories.filter((c) => !c.parentSlug), [categories]);
+  const isTopNew = topId === NEW_TOP;
+  const topSlug = isTopNew ? null : (categories.find((c) => c.id === topId)?.slug ?? null);
   const subs = useMemo(
-    () => cats.filter((c) => c.parentSlug === topSlug),
-    [cats, topSlug],
+    () => (isTopNew ? [] : categories.filter((c) => c.parentSlug === topSlug)),
+    [categories, topSlug, isTopNew],
   );
 
   const categoryId = subId || topId;
@@ -66,43 +75,44 @@ export function CategorySelect({
   function pickTop(id: string) {
     setTopId(id);
     setSubId("");
+    setPendingSub(null); // a staged sub belongs to the previously selected top
+    if (id !== NEW_TOP) setPendingTop(null); // dropped the staged new top
   }
 
-  function addTop() {
+  function stageTop() {
     const name = newTop.trim();
     if (!name) return;
-    startTransition(async () => {
-      const c = await createCategory(name, null);
-      setCats((prev) => [
-        ...prev,
-        { id: c.id, slug: c.slug, label: c.name, parentSlug: null },
-      ]);
-      setTopId(c.id);
-      setSubId("");
-      setNewTop("");
-      setAddingTop(false);
-    });
+    setPendingTop(name);
+    setTopId(NEW_TOP);
+    setSubId("");
+    setPendingSub(null);
+    setNewTop("");
+    setAddingTop(false);
   }
 
-  function addSub() {
+  function stageSub() {
     const name = newSub.trim();
-    if (!name || !topId || !topSlug) return;
-    const parentSlug = topSlug;
-    startTransition(async () => {
-      const c = await createCategory(name, topId);
-      setCats((prev) => [
-        ...prev,
-        { id: c.id, slug: c.slug, label: c.name, parentSlug },
-      ]);
-      setSubId(c.id);
-      setNewSub("");
-      setAddingSub(false);
-    });
+    if (!name || !topId) return;
+    setPendingSub(name);
+    setSubId(NEW_SUB);
+    setNewSub("");
+    setAddingSub(false);
   }
 
   return (
     <>
       <input type="hidden" name="category_id" value={categoryId} />
+      {isTopNew && <input type="hidden" name="new_top_name" value={pendingTop ?? ""} />}
+      {subId === NEW_SUB && (
+        <>
+          <input type="hidden" name="new_sub_name" value={pendingSub ?? ""} />
+          <input
+            type="hidden"
+            name="new_sub_parent_id"
+            value={isTopNew ? NEW_TOP : topId}
+          />
+        </>
+      )}
 
       {/* หมวดหมู่ */}
       <div className="flex flex-col gap-1">
@@ -117,6 +127,7 @@ export function CategorySelect({
                 {c.label}
               </option>
             ))}
+            {pendingTop && <option value={NEW_TOP}>{pendingTop} (ใหม่)</option>}
           </select>
           <button
             type="button"
@@ -132,13 +143,14 @@ export function CategorySelect({
             <input
               value={newTop}
               onChange={(e) => setNewTop(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); stageTop(); } }}
               placeholder="ชื่อหมวดหมู่ใหม่"
               className="w-full rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
             />
             <button
               type="button"
-              onClick={addTop}
-              disabled={pending || !newTop.trim()}
+              onClick={stageTop}
+              disabled={!newTop.trim()}
               className="flex-none rounded-lg bg-primary px-4 py-2 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
             >
               เพิ่ม
@@ -165,6 +177,7 @@ export function CategorySelect({
                 {c.label}
               </option>
             ))}
+            {pendingSub && <option value={NEW_SUB}>{pendingSub} (ใหม่)</option>}
           </select>
           <button
             type="button"
@@ -181,13 +194,14 @@ export function CategorySelect({
             <input
               value={newSub}
               onChange={(e) => setNewSub(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); stageSub(); } }}
               placeholder="ชื่อหมวดหมู่ย่อยใหม่"
               className="w-full rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
             />
             <button
               type="button"
-              onClick={addSub}
-              disabled={pending || !newSub.trim()}
+              onClick={stageSub}
+              disabled={!newSub.trim()}
               className="flex-none rounded-lg bg-primary px-4 py-2 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
             >
               เพิ่ม
@@ -197,6 +211,11 @@ export function CategorySelect({
         {!topId && (
           <p className="font-body-sm text-body-sm text-on-surface-variant">
             เลือกหมวดหมู่ก่อนเพื่อเลือกหรือเพิ่มหมวดหมู่ย่อย
+          </p>
+        )}
+        {(pendingTop || pendingSub) && (
+          <p className="font-body-sm text-body-sm text-secondary">
+            หมวดหมู่ใหม่จะถูกสร้างเมื่อกดบันทึกข้อมูล
           </p>
         )}
       </div>

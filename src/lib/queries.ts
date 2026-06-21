@@ -36,6 +36,7 @@ function mapListItem(row: any): ProductListItem {
     category: row.category
       ? { slug: row.category.slug, name: row.category.name, nameTh: row.category.name_th }
       : null,
+    brand: row.brand ? { slug: row.brand.slug, name: row.brand.name } : null,
     primaryImage: pickPrimaryImage(row.media ?? []),
     createdAt: row.created_at,
   };
@@ -58,7 +59,7 @@ function mapCategory(row: any): Category {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const LIST_SELECT =
-  "id, slug, name, name_th, summary, status, created_at, category:categories!products_category_id_fkey(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
+  "id, slug, name, name_th, summary, status, created_at, category:categories!products_category_id_fkey(slug, name, name_th), brand:brands!products_brand_id_fkey(slug, name), media:product_media(url, type, is_primary, sort_order)";
 
 /* --------------------------------------------------------------- categories */
 
@@ -83,6 +84,17 @@ export const getCategories = cache(async (): Promise<Category[]> => {
       parentSlug: r.parent_id ? (byId.get(r.parent_id)?.slug ?? null) : null,
     }),
   );
+});
+
+/** All brands (slug + name), ordered with RYOKO first then alphabetical. */
+export const getBrands = cache(async (): Promise<{ slug: string; name: string }[]> => {
+  const supabase = createPublicClient();
+  const { data } = await supabase.from("brands").select("slug, name");
+  return (data ?? [])
+    .map((b) => ({ slug: b.slug, name: b.name }))
+    .sort((a, b) =>
+      a.slug === "ryoko" ? -1 : b.slug === "ryoko" ? 1 : a.name.localeCompare(b.name),
+    );
 });
 
 /** Top-level categories with their `children` nested. */

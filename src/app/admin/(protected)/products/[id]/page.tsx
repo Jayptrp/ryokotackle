@@ -19,15 +19,16 @@ export default async function ProductEditorPage({
   const isNew = id === "new";
 
   const supabase = await createAdminClient();
-  const [categories, warranties] = await Promise.all([
+  const [categories, warranties, brandsRes] = await Promise.all([
     getCategories(),
     getWarranties(),
+    supabase.from("brands").select("id, name, slug").order("name"),
   ]);
 
   let product: {
     id: string; slug: string; name: string; nameTh: string | null;
     summary: string | null; description: string | null;
-    categoryId: string | null; status: string; isFeatured: boolean;
+    brandId: string | null; categoryId: string | null; status: string; isFeatured: boolean;
     media: ProductMedia[]; channels: ChannelRow[]; warrantyIds: string[];
   } | null = null;
 
@@ -35,7 +36,7 @@ export default async function ProductEditorPage({
     const { data } = await supabase
       .from("products")
       .select(
-        "id, slug, name, name_th, summary, description, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty_id)",
+        "id, slug, name, name_th, summary, description, brand_id, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty_id)",
       )
       .eq("id", id)
       .maybeSingle();
@@ -51,6 +52,7 @@ export default async function ProductEditorPage({
       nameTh: raw.name_th,
       summary: raw.summary,
       description: raw.description,
+      brandId: raw.brand_id,
       categoryId: raw.category_id,
       status: raw.status,
       isFeatured: raw.is_featured ?? false,
@@ -88,6 +90,11 @@ export default async function ProductEditorPage({
   }));
 
   const warrantyOptions = warranties.map((w) => ({ id: w.id, name: w.name }));
+  const brandRows = brandsRes.data ?? [];
+  const brandOptions = brandRows.map((b) => ({ id: b.id, name: b.name }));
+  // Brand is mandatory — new products default to RYOKO.
+  const defaultBrandId =
+    brandRows.find((b) => b.slug === "ryoko")?.id ?? brandOptions[0]?.id ?? "";
 
   return (
     <ProductEditor
@@ -95,6 +102,8 @@ export default async function ProductEditorPage({
       pageError={pageError}
       product={product}
       categories={categoryOptions}
+      brands={brandOptions}
+      defaultBrandId={defaultBrandId}
       warranties={warrantyOptions}
     />
   );

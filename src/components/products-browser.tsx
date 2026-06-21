@@ -20,11 +20,13 @@ const PAGE_SIZE = 24;
 export function ProductsBrowser({
   products,
   categories,
+  brands,
   lockCategory,
   basePath = "/products",
 }: {
   products: ProductListItem[];
   categories: Category[]; // flat, with parentSlug
+  brands: { slug: string; name: string }[];
   /** When set, the category chip row is hidden and results stay within it. */
   lockCategory?: string;
   basePath?: string;
@@ -33,6 +35,7 @@ export function ProductsBrowser({
   // Any deep-link filters in the URL are applied on the client after mount.
   const [category, setCategory] = useState(lockCategory ?? "all");
   const [subcategory, setSubcategory] = useState("");
+  const [brand, setBrand] = useState("ryoko"); // default to the house brand
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"name" | "newest">("name");
   const [page, setPage] = useState(1);
@@ -42,6 +45,7 @@ export function ProductsBrowser({
     const p = new URLSearchParams(window.location.search);
     if (!lockCategory && p.get("category")) setCategory(p.get("category")!);
     if (p.get("subcategory")) setSubcategory(p.get("subcategory")!);
+    if (p.get("brand")) setBrand(p.get("brand")!);
     if (p.get("q")) setQ(p.get("q")!);
     if (p.get("sort") === "newest") setSort("newest");
     const pg = Number(p.get("page"));
@@ -103,6 +107,7 @@ export function ProductsBrowser({
       list = list.filter((p) => p.category && set.has(p.category.slug));
     }
     if (subcategory) list = list.filter((p) => p.category?.slug === subcategory);
+    if (brand !== "all") list = list.filter((p) => p.brand?.slug === brand);
     const term = q.trim().toLowerCase();
     if (term) {
       list = list.filter(
@@ -117,7 +122,7 @@ export function ProductsBrowser({
         : a.name.localeCompare(b.name),
     );
     return sorted;
-  }, [products, category, subcategory, q, sort, lockCategory, descendantSlugs]);
+  }, [products, category, subcategory, brand, q, sort, lockCategory, descendantSlugs]);
 
   // Mirror state into the URL without navigating (keeps links shareable).
   // Gated on `ready` so it doesn't strip deep-link params before they're read.
@@ -127,12 +132,13 @@ export function ProductsBrowser({
     if (!lockCategory && category && category !== "all")
       params.set("category", category);
     if (subcategory) params.set("subcategory", subcategory);
+    if (brand !== "ryoko") params.set("brand", brand); // ryoko is the default
     if (q.trim()) params.set("q", q.trim());
     if (sort === "newest") params.set("sort", "newest");
     if (page > 1) params.set("page", String(page));
     const qs = params.toString();
     window.history.replaceState(null, "", qs ? `${basePath}?${qs}` : basePath);
-  }, [ready, category, subcategory, q, sort, page, lockCategory, basePath]);
+  }, [ready, category, subcategory, brand, q, sort, page, lockCategory, basePath]);
 
   // Filter changes reset to page 1 (page changes themselves must not).
   // Clicking the active category again clears it back to "all".
@@ -142,6 +148,10 @@ export function ProductsBrowser({
   };
   const pickSubcategory = (v: string) => {
     setSubcategory(v);
+    setPage(1);
+  };
+  const pickBrand = (v: string) => {
+    setBrand(v);
     setPage(1);
   };
   const pickQuery = (v: string) => {
@@ -186,8 +196,27 @@ export function ProductsBrowser({
           </div>
         )}
 
-        <div className="flex flex-col gap-stack-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-xs">
+        <div className="flex flex-col gap-stack-sm sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-44 sm:shrink-0">
+            <select
+              value={brand}
+              onChange={(e) => pickBrand(e.target.value)}
+              className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
+            >
+              <option value="all">ทุกแบรนด์</option>
+              {brands.map((b) => (
+                <option key={b.slug} value={b.slug}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            <Icon
+              name="expand_more"
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+            />
+          </div>
+
+          <div className="relative w-full sm:w-56 sm:shrink-0">
             <select
               value={subcategory}
               onChange={(e) => pickSubcategory(e.target.value)}
@@ -207,7 +236,7 @@ export function ProductsBrowser({
             />
           </div>
 
-          <div className="relative w-full sm:max-w-xs">
+          <div className="relative w-full sm:flex-1">
             <Icon
               name="search"
               className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"

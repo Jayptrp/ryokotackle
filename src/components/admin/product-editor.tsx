@@ -26,6 +26,7 @@ interface ProductData {
   nameTh: string | null;
   summary: string | null;
   description: string | null;
+  brandId: string | null;
   categoryId: string | null;
   status: string;
   isFeatured: boolean;
@@ -39,11 +40,19 @@ interface WarrantyOption {
   name: string;
 }
 
+interface BrandOption {
+  id: string;
+  name: string;
+}
+
 interface Props {
   isNew: boolean;
   pageError?: string;
   product: ProductData | null;
   categories: CategoryOption[];
+  brands: BrandOption[];
+  /** Brand is mandatory — new products start on this (RYOKO). */
+  defaultBrandId: string;
   warranties: WarrantyOption[];
 }
 
@@ -123,12 +132,13 @@ function SectionBlock({
 
 // ── ProductEditor ─────────────────────────────────────────────────────────────
 
-export function ProductEditor({ isNew, pageError, product, categories, warranties }: Props) {
+export function ProductEditor({ isNew, pageError, product, categories, brands, defaultBrandId, warranties }: Props) {
   const [isPending, startTransition] = useTransition();
 
   // ── controlled field state ────────────────────────────────────────────────
   const [name, setName] = useState(product?.name ?? "");
   const [nameTh, setNameTh] = useState(product?.nameTh ?? "");
+  const [brandId, setBrandId] = useState<string>(product?.brandId ?? defaultBrandId);
   const [categoryId, setCategoryId] = useState<string | null>(product?.categoryId ?? null);
   const [status, setStatus] = useState(product?.status ?? "draft");
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
@@ -153,6 +163,7 @@ export function ProductEditor({ isNew, pageError, product, categories, warrantie
   const orig = useRef({
     name: product?.name ?? "",
     nameTh: product?.nameTh ?? "",
+    brandId: product?.brandId ?? defaultBrandId,
     categoryId: product?.categoryId ?? null,
     status: product?.status ?? "draft",
     isFeatured: product?.isFeatured ?? false,
@@ -167,6 +178,7 @@ export function ProductEditor({ isNew, pageError, product, categories, warrantie
   const d = {
     name: name !== orig.current.name,
     nameTh: nameTh !== (orig.current.nameTh ?? ""),
+    brand: brandId !== (orig.current.brandId ?? ""),
     category: categoryId !== orig.current.categoryId,
     status: status !== orig.current.status,
     isFeatured: isFeatured !== orig.current.isFeatured,
@@ -179,7 +191,7 @@ export function ProductEditor({ isNew, pageError, product, categories, warrantie
 
   const sectionDirty = {
     media: d.media,
-    core: d.name || d.nameTh || d.category || d.status || d.isFeatured,
+    core: d.name || d.nameTh || d.brand || d.category || d.status || d.isFeatured,
     summary: d.summary,
     channels: d.channels,
     description: d.description,
@@ -195,6 +207,7 @@ export function ProductEditor({ isNew, pageError, product, categories, warrantie
   function revertCore() {
     setName(orig.current.name);
     setNameTh(orig.current.nameTh ?? "");
+    setBrandId(orig.current.brandId ?? "");
     setCategoryId(orig.current.categoryId);
     setStatus(orig.current.status);
     setIsFeatured(orig.current.isFeatured);
@@ -334,12 +347,33 @@ export function ProductEditor({ isNew, pageError, product, categories, warrantie
               />
             </div>
 
-            <CategorySelect
-              key={`cat-${categoryKey}`}
-              categories={categories}
-              defaultCategoryId={orig.current.categoryId}
-              onCategoryChange={setCategoryId}
-            />
+            {/* ยี่ห้อ + หมวดหมู่ + หมวดหมู่ย่อย in one row (brand on the left) */}
+            <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-label-caps text-label-caps text-on-surface-variant">
+                  ยี่ห้อ
+                </label>
+                <select
+                  name="brand_id"
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                  className={`rounded-lg border bg-white px-4 py-3 font-body-md text-body-md outline-none ${inputCls(d.brand)}`}
+                >
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <CategorySelect
+                key={`cat-${categoryKey}`}
+                categories={categories}
+                defaultCategoryId={orig.current.categoryId}
+                onCategoryChange={setCategoryId}
+              />
+            </div>
 
             <div className="flex flex-col gap-1">
               <label className="font-label-caps text-label-caps text-on-surface-variant">

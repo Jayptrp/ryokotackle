@@ -88,6 +88,7 @@ export interface ProductListItem {
   summary: string | null;
   status: ProductStatus;
   category: Pick<Category, "slug" | "name" | "nameTh"> | null;
+  brand: { slug: string; name: string } | null;
   primaryImage: string | null;
   createdAt: string;
 }

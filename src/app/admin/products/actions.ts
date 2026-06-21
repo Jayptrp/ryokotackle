@@ -46,6 +46,95 @@ async function revalidateCategoryPaths(
   for (const slug of slugs) revalidatePath(`/category/${slug}`);
 }
 
+/**
+ * Insert a category (parentId = null) or subcategory on the fly. Name is used
+ * for both EN and TH; slug is derived and de-duplicated. Returns the new row.
+ * Caller is responsible for revalidation.
+ */
+async function insertCategory(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  name: string,
+  parentId: string | null,
+): Promise<{ id: string; slug: string; name: string }> {
+  const clean = name.trim();
+  if (!clean) throw new Error("Category name is required");
+
+  const base = slugify(clean) || "category";
+  let slug = base;
+  let attempt = 0;
+  while (true) {
+    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
+    const { data } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!data) {
+      slug = candidate;
+      break;
+    }
+    attempt++;
+  }
+
+  const { data: last } = await supabase
+    .from("categories")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      name: clean,
+      name_th: clean,
+      slug,
+      parent_id: parentId,
+      sort_order: (last?.sort_order ?? 0) + 10,
+    })
+    .select("id, slug, name")
+    .single();
+  if (error) throw error;
+  return { id: data.id, slug: data.slug, name: data.name };
+}
+
+// Sentinels the CategorySelect submits for not-yet-created categories. Kept in
+// sync with src/components/admin/category-select.tsx.
+const NEW_TOP = "__new_top__";
+const NEW_SUB = "__new_sub__";
+
+/**
+ * Resolve the product's `category_id` from the form, creating any pending new
+ * category/subcategory first (deferred from the editor until this save). New
+ * categories are created here — never on click in the editor.
+ */
+async function resolveCategoryId(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  formData: FormData,
+): Promise<string | null> {
+  const categoryId = (formData.get("category_id") as string) || null;
+
+  if (categoryId === NEW_TOP) {
+    const name = ((formData.get("new_top_name") as string) || "").trim();
+    if (!name) return null;
+    return (await insertCategory(supabase, name, null)).id;
+  }
+
+  if (categoryId === NEW_SUB) {
+    const name = ((formData.get("new_sub_name") as string) || "").trim();
+    if (!name) return null;
+    let parentId = (formData.get("new_sub_parent_id") as string) || null;
+    if (parentId === NEW_TOP) {
+      const topName = ((formData.get("new_top_name") as string) || "").trim();
+      if (!topName) return null;
+      parentId = (await insertCategory(supabase, topName, null)).id;
+    }
+    return (await insertCategory(supabase, name, parentId)).id;
+  }
+
+  return categoryId;
+}
+
 async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminClient>>, base: string, excludeId?: string) {
   const slug = slugify(base);
   let attempt = 0;
@@ -282,7 +371,8 @@ export async function saveProductAll(formData: FormData) {
   const nameTh = (formData.get("name_th") as string)?.trim() || null;
   const summary = (formData.get("summary") as string)?.trim() || null;
   const description = (formData.get("description") as string) || null;
-  const categoryId = (formData.get("category_id") as string) || null;
+  const brandId = (formData.get("brand_id") as string) || null;
+  const categoryId = await resolveCategoryId(supabase, formData);
   const status = (formData.get("status") as string) || "draft";
   const isFeatured = formData.getAll("is_featured").includes("true");
 
@@ -309,6 +399,10 @@ export async function saveProductAll(formData: FormData) {
     status: status as never,
     is_featured: isFeatured,
     slug,
+    // brand_id is NOT NULL (defaults to RYOKO). Only set it when provided so we
+    // never write null — on insert the DB default applies, on update the
+    // existing value is kept.
+    ...(brandId ? { brand_id: brandId } : {}),
   };
 
   let productId = id;
@@ -419,60 +513,3 @@ export async function deleteProduct(id: string) {
   redirect("/admin");
 }
 
-/**
- * Create a category (parentId = null) or subcategory (parentId set) on the fly
- * from the product editor. Name is used for both EN and TH; slug is derived and
- * de-duplicated. Returns the new row so the editor can select it immediately.
- */
-export async function createCategory(
-  name: string,
-  parentId: string | null,
-): Promise<{ id: string; slug: string; name: string }> {
-  const supabase = await createAdminClient();
-  const clean = name.trim();
-  if (!clean) throw new Error("Category name is required");
-
-  // Unique slug among categories.
-  const base = slugify(clean) || "category";
-  let slug = base;
-  let attempt = 0;
-  while (true) {
-    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
-    const { data } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("slug", candidate)
-      .maybeSingle();
-    if (!data) {
-      slug = candidate;
-      break;
-    }
-    attempt++;
-  }
-
-  const { data: last } = await supabase
-    .from("categories")
-    .select("sort_order")
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data, error } = await supabase
-    .from("categories")
-    .insert({
-      name: clean,
-      name_th: clean,
-      slug,
-      parent_id: parentId,
-      sort_order: (last?.sort_order ?? 0) + 10,
-    })
-    .select("id, slug, name")
-    .single();
-  if (error) throw error;
-
-  revalidatePath("/");
-  revalidatePath("/products");
-  revalidatePath("/admin");
-
-  return { id: data.id, slug: data.slug, name: data.name };
-}
