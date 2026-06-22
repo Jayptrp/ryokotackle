@@ -369,7 +369,7 @@ export function WarrantyManager({ initial, initialPage }: Props) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className={`rounded-lg border bg-white px-4 py-2.5 font-body-md text-body-md outline-none ${inputCls(title !== orig.current.title)}`}
-              placeholder="การรับประกันและการเคลมสินค้า"
+              placeholder="ประกันและอะไหล่"
             />
           </div>
           <div className="flex flex-col gap-1">

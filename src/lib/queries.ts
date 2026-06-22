@@ -433,7 +433,7 @@ export async function getWarrantyPage(): Promise<{
     .eq("id", 1)
     .maybeSingle();
   return {
-    title: data?.title?.trim() || "การรับประกันและการเคลมสินค้า",
+    title: data?.title?.trim() || "ประกันและอะไหล่",
     subtitle: data?.subtitle?.trim() || "",
   };
 }

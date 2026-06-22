@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation";
 const NAV: { href: string; label: string; icon: string; exact?: boolean }[] = [
   { href: "/admin", label: "สินค้าทั้งหมด", icon: "inventory_2", exact: true },
   { href: "/admin/products/new", label: "เพิ่มสินค้าใหม่", icon: "add_circle" },
-  { href: "/admin/warranty", label: "การรับประกันและการเคลมสินค้า", icon: "verified_user" },
+  { href: "/admin/warranty", label: "ประกันและอะไหล่", icon: "verified_user" },
   { href: "/admin/pages/about", label: "แก้ไขหน้าเกี่ยวกับเรา", icon: "description" },
 ];
 

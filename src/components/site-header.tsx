@@ -133,6 +133,13 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
           </div>
 
           <Link
+            href="/warranty"
+            className={linkCls(isActive(pathname, "/warranty"))}
+          >
+            ประกันและอะไหล่
+          </Link>
+
+          <Link
             href="/contact"
             className={linkCls(isActive(pathname, "/contact"))}
           >
@@ -202,9 +209,16 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                 ))}
 
                 <Link
-                  href="/contact"
+                  href="/warranty"
                   onClick={() => setOpen(false)}
                   className="mt-2 rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
+                >
+                  ประกันและอะไหล่
+                </Link>
+                <Link
+                  href="/contact"
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 >
                   ติดต่อเรา
                 </Link>

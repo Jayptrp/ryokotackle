@@ -15,7 +15,7 @@ export default async function WarrantyAdminPage() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center justify-between gap-3">
         <h1 className="font-headline-md text-headline-md text-primary">
-          การรับประกันและการเคลมสินค้า
+          ประกันและอะไหล่
         </h1>
         <Link
           href="/warranty"
