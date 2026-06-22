@@ -19,6 +19,17 @@ function toMetaDescription(html: string, max = 160): string {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
+/**
+ * Whether a rich-text field has real content. Tiptap stores an empty editor as
+ * "<p></p>", so a plain truthy check isn't enough — treat empty/whitespace-only
+ * markup as "no detail", but keep media-only content (images, tables) as real.
+ */
+function hasRichContent(html?: string | null): boolean {
+  if (!html) return false;
+  if (/<(img|table|ul|ol|h[1-6]|blockquote|pre|iframe|video)\b/i.test(html)) return true;
+  return html.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim().length > 0;
+}
+
 // Pre-render published products; revalidate on demand when admins edit.
 export const dynamicParams = true;
 
@@ -220,6 +231,18 @@ export default async function ProductDetailPage({
                 className="mt-4 [&_p]:font-body-lg [&_p]:text-body-lg [&_p]:text-on-surface-variant"
               />
             )}
+
+            {/* รายละเอียดสินค้า affordance — jump to the detail, or a contact
+                note when the product has no rich description. */}
+            <div className="mt-4">
+              {hasRichContent(product.description) ? (
+                <ScrollToButton targetId="product-detail" label="ดูรายละเอียดสินค้า" />
+              ) : (
+                <p className="font-body-md text-body-md text-on-surface-variant">
+                  ติดต่อทางบริษัทเพื่อขอรายละเอียดเพิ่มเติม
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Purchase / contact channels */}
@@ -265,15 +288,11 @@ export default async function ProductDetailPage({
               </Link>
             </div>
           )}
-
-          {product.description && (
-            <ScrollToButton targetId="product-detail" label="ดูรายละเอียดสินค้า" />
-          )}
         </div>
       </div>
 
       {/* Full detail */}
-      {product.description && (
+      {hasRichContent(product.description) && (
         <div
           id="product-detail"
           className="mt-section-gap scroll-mt-24 border-t border-outline-variant pt-section-gap"
@@ -283,7 +302,7 @@ export default async function ProductDetailPage({
               <span className="h-1 w-8 rounded-full bg-secondary" />
               รายละเอียดสินค้า
             </h2>
-            <RichContent html={product.description} />
+            <RichContent html={product.description ?? ""} />
           </div>
         </div>
       )}
