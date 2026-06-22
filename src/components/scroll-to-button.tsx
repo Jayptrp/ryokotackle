@@ -18,7 +18,7 @@ export function ScrollToButton({
           .getElementById(targetId)
           ?.scrollIntoView({ behavior: "smooth", block: "start" })
       }
-      className="group flex w-full items-center justify-center gap-1 border-t border-outline-variant pt-stack-lg font-body-md text-body-md text-secondary transition-colors hover:text-primary"
+      className="group mx-auto flex w-fit items-center justify-center gap-1 font-body-md text-body-md text-secondary transition-colors hover:text-primary"
     >
       {label}
       <Icon

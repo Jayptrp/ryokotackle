@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
@@ -25,6 +25,22 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Expanded (big logo + full company name) at the top; shrinks to the compact
+  // logo + "Ryoko" once the user scrolls.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      // Hysteresis: once expanded, collapse only past 64px; once collapsed,
+      // expand only back near the top (≤8px). The dead zone between keeps tiny
+      // touchpad scrolls near the edge from rapidly flipping the header.
+      setScrolled((prev) => (prev ? y > 8 : y > 64));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const linkCls = (active: boolean) =>
     cn(
       "font-label-caps text-label-caps transition-colors",
@@ -35,21 +51,39 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant bg-surface">
-      <Container className="flex h-16 items-center justify-between md:h-20">
-        <Link
-          href="/"
-          className="flex items-center gap-2 font-headline-md text-headline-md font-bold tracking-tight text-primary"
-        >
+      <Container
+        className={cn(
+          "flex items-center justify-between gap-3 transition-all duration-300",
+          scrolled ? "h-16 md:h-20" : "h-32 md:h-40",
+        )}
+      >
+        <Link href="/" className="flex min-w-0 items-center gap-3">
           <Image
             src="/ryoko-logo.png"
             alt="Ryoko Tackle"
-            width={40}
-            height={40}
-            className="h-9 w-9 md:h-10 md:w-10"
+            width={64}
+            height={64}
+            className={cn(
+              "flex-none transition-all duration-300",
+              scrolled ? "h-12 w-12 md:h-16 md:w-16" : "h-24 w-24 md:h-32 md:w-32",
+            )}
             priority
             unoptimized
           />
-          Ryoko
+          {scrolled ? (
+            <span className="font-headline-md text-headline-md font-bold tracking-tight text-primary">
+              Ryoko
+            </span>
+          ) : (
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="font-headline-sm text-sm font-bold text-primary md:text-base lg:text-headline-sm">
+                บริษัท ที.อาร์.วาย.ฟิชชิ่ง แทคเคิล จำกัด
+              </span>
+              <span className="mt-0.5 text-[11px] leading-tight text-on-surface-variant md:text-xs">
+                T.R.Y. Fishing Tackle Co., Ltd.
+              </span>
+            </span>
+          )}
         </Link>
 
         {/* Desktop nav */}
@@ -97,6 +131,13 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
               </div>
             </div>
           </div>
+
+          <Link
+            href="/warranty"
+            className={linkCls(isActive(pathname, "/warranty"))}
+          >
+            ประกันและอะไหล่
+          </Link>
 
           <Link
             href="/contact"
@@ -163,14 +204,21 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                     className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-body-sm text-body-sm text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                   >
                     <Icon name={c.icon ?? "category"} className="text-lg" />
-                    {c.name}
+                    {c.nameTh ?? c.name}
                   </Link>
                 ))}
 
                 <Link
-                  href="/contact"
+                  href="/warranty"
                   onClick={() => setOpen(false)}
                   className="mt-2 rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
+                >
+                  ประกันและอะไหล่
+                </Link>
+                <Link
+                  href="/contact"
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 >
                   ติดต่อเรา
                 </Link>

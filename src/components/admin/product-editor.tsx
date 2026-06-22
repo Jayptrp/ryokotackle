@@ -5,6 +5,7 @@ import { useState, useTransition, useRef } from "react";
 import { saveProductAll } from "@/app/admin/products/actions";
 import { CategorySelect } from "@/components/admin/category-select";
 import { ProductNameField } from "@/components/admin/product-name-field";
+import { SummaryEditor } from "@/components/admin/summary-editor";
 import { TiptapEditor } from "@/components/admin/tiptap-editor";
 import { MediaManager, type PendingMedia } from "@/components/admin/media-manager";
 import { ChannelManager, type ChannelRow } from "@/components/admin/channel-manager";
@@ -26,11 +27,23 @@ interface ProductData {
   nameTh: string | null;
   summary: string | null;
   description: string | null;
+  brandId: string | null;
   categoryId: string | null;
   status: string;
   isFeatured: boolean;
   media: ProductMedia[];
   channels: ChannelRow[];
+  warrantyIds: string[];
+}
+
+interface WarrantyOption {
+  id: string;
+  name: string;
+}
+
+interface BrandOption {
+  id: string;
+  name: string;
 }
 
 interface Props {
@@ -38,6 +51,10 @@ interface Props {
   pageError?: string;
   product: ProductData | null;
   categories: CategoryOption[];
+  brands: BrandOption[];
+  /** Brand is mandatory — new products start on this (RYOKO). */
+  defaultBrandId: string;
+  warranties: WarrantyOption[];
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -52,6 +69,12 @@ function isMediaDirty(items: PendingMedia[], original: ProductMedia[]): boolean 
 function isChannelsEqual(a: ChannelRow[], b: ChannelRow[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((r, i) => r.channel === b[i].channel && r.url === b[i].url);
+}
+
+function isSetEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(b);
+  return a.every((x) => set.has(x));
 }
 
 /** Red border + ring when a field has been modified. */
@@ -110,12 +133,13 @@ function SectionBlock({
 
 // ── ProductEditor ─────────────────────────────────────────────────────────────
 
-export function ProductEditor({ isNew, pageError, product, categories }: Props) {
+export function ProductEditor({ isNew, pageError, product, categories, brands, defaultBrandId, warranties }: Props) {
   const [isPending, startTransition] = useTransition();
 
   // ── controlled field state ────────────────────────────────────────────────
   const [name, setName] = useState(product?.name ?? "");
   const [nameTh, setNameTh] = useState(product?.nameTh ?? "");
+  const [brandId, setBrandId] = useState<string>(product?.brandId ?? defaultBrandId);
   const [categoryId, setCategoryId] = useState<string | null>(product?.categoryId ?? null);
   const [status, setStatus] = useState(product?.status ?? "draft");
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
@@ -129,16 +153,19 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
 
   const [mediaItems, setMediaItems] = useState<PendingMedia[]>(product?.media ?? []);
   const [channels, setChannels] = useState<ChannelRow[]>(initialChannels);
+  const [warrantyIds, setWarrantyIds] = useState<string[]>(product?.warrantyIds ?? []);
 
   // Keys to force-remount components that manage their own internal state
   const [nameKey, setNameKey] = useState(0);
   const [categoryKey, setCategoryKey] = useState(0);
+  const [summaryKey, setSummaryKey] = useState(0);
   const [descriptionKey, setDescriptionKey] = useState(0);
 
   // ── original values (never mutated after init) ────────────────────────────
   const orig = useRef({
     name: product?.name ?? "",
     nameTh: product?.nameTh ?? "",
+    brandId: product?.brandId ?? defaultBrandId,
     categoryId: product?.categoryId ?? null,
     status: product?.status ?? "draft",
     isFeatured: product?.isFeatured ?? false,
@@ -146,12 +173,14 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
     description: product?.description ?? "",
     media: product?.media ?? [] as ProductMedia[],
     channels: initialChannels,
+    warrantyIds: product?.warrantyIds ?? [],
   });
 
   // ── per-section dirty flags (computed, no useState needed) ────────────────
   const d = {
     name: name !== orig.current.name,
     nameTh: nameTh !== (orig.current.nameTh ?? ""),
+    brand: brandId !== (orig.current.brandId ?? ""),
     category: categoryId !== orig.current.categoryId,
     status: status !== orig.current.status,
     isFeatured: isFeatured !== orig.current.isFeatured,
@@ -159,14 +188,16 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
     description: description !== (orig.current.description ?? ""),
     media: isMediaDirty(mediaItems, orig.current.media),
     channels: !isChannelsEqual(channels, orig.current.channels),
+    warranties: !isSetEqual(warrantyIds, orig.current.warrantyIds),
   };
 
   const sectionDirty = {
     media: d.media,
-    core: d.name || d.nameTh || d.category || d.status || d.isFeatured,
+    core: d.name || d.nameTh || d.brand || d.category || d.status || d.isFeatured,
     summary: d.summary,
     channels: d.channels,
     description: d.description,
+    warranties: d.warranties,
   };
 
   const isDirty = Object.values(sectionDirty).some(Boolean);
@@ -178,6 +209,7 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
   function revertCore() {
     setName(orig.current.name);
     setNameTh(orig.current.nameTh ?? "");
+    setBrandId(orig.current.brandId ?? "");
     setCategoryId(orig.current.categoryId);
     setStatus(orig.current.status);
     setIsFeatured(orig.current.isFeatured);
@@ -186,9 +218,18 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
   }
   function revertSummary() {
     setSummary(orig.current.summary ?? "");
+    setSummaryKey((k) => k + 1); // remount editor with original content
   }
   function revertChannels() {
     setChannels(orig.current.channels);
+  }
+  function revertWarranties() {
+    setWarrantyIds(orig.current.warrantyIds);
+  }
+  function toggleWarranty(id: string) {
+    setWarrantyIds((ids) =>
+      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
+    );
   }
   function revertDescription() {
     setDescription(orig.current.description ?? "");
@@ -207,6 +248,7 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
       ),
     );
     fd.set("channels_json", JSON.stringify(channels));
+    fd.set("warranties_json", JSON.stringify(warrantyIds));
     startTransition(async () => { await saveProductAll(fd); });
   }
 
@@ -308,12 +350,33 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
               />
             </div>
 
-            <CategorySelect
-              key={`cat-${categoryKey}`}
-              categories={categories}
-              defaultCategoryId={orig.current.categoryId}
-              onCategoryChange={setCategoryId}
-            />
+            {/* ยี่ห้อ + หมวดหมู่ + หมวดหมู่ย่อย in one row (brand on the left) */}
+            <div className="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-label-caps text-label-caps text-on-surface-variant">
+                  ยี่ห้อ
+                </label>
+                <select
+                  name="brand_id"
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                  className={`rounded-lg border bg-white px-4 py-3 font-body-md text-body-md outline-none ${inputCls(d.brand)}`}
+                >
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <CategorySelect
+                key={`cat-${categoryKey}`}
+                categories={categories}
+                defaultCategoryId={orig.current.categoryId}
+                onCategoryChange={setCategoryId}
+              />
+            </div>
 
             <div className="flex flex-col gap-1">
               <label className="font-label-caps text-label-caps text-on-surface-variant">
@@ -355,17 +418,15 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
         <div className={`grid grid-cols-1 gap-6 ${!isNew && product ? "md:grid-cols-2" : ""}`}>
           <SectionBlock
             title="คำอธิบายสั้น"
-            subtitle="แสดงใต้ชื่อสินค้า ควรสั้นกระชับ (1–2 ประโยค)"
+            subtitle="แสดงใต้ชื่อสินค้า"
             isDirty={sectionDirty.summary}
             onRevert={revertSummary}
           >
-            <textarea
+            <SummaryEditor
+              key={`summary-${summaryKey}`}
               name="summary"
-              rows={5}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              className={`w-full resize-none rounded-lg border bg-white px-4 py-3 font-body-md text-body-md outline-none ${inputCls(d.summary)}`}
-              placeholder="เช่น: รอกหยดน้ำระดับพรีเมียม สเปคญี่ปุ่นแท้ พร้อมระบบเบรก X-Drag"
+              defaultValue={orig.current.summary || ""}
+              onUpdate={setSummary}
             />
           </SectionBlock>
 
@@ -383,6 +444,46 @@ export function ProductEditor({ isNew, pageError, product, categories }: Props) 
             </SectionBlock>
           )}
         </div>
+
+        {/* ── การรับประกัน ──────────────────────────────── */}
+        {!isNew && product && (
+          <SectionBlock
+            title="การรับประกัน"
+            subtitle="เลือกประเภทการรับประกันของสินค้านี้ — แสดงเป็นแท็กในหน้าสินค้า (ถ้าไม่เลือกจะแสดงให้ติดต่อสอบถาม)"
+            isDirty={sectionDirty.warranties}
+            onRevert={revertWarranties}
+          >
+            {warranties.length === 0 ? (
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                ยังไม่มีประเภทการรับประกัน —{" "}
+                <Link href="/admin/warranty" className="text-primary hover:underline">
+                  เพิ่มได้ที่หน้าการรับประกัน
+                </Link>
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {warranties.map((w) => {
+                  const selected = warrantyIds.includes(w.id);
+                  return (
+                    <button
+                      key={w.id}
+                      type="button"
+                      onClick={() => toggleWarranty(w.id)}
+                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 font-label-caps text-label-caps transition-colors ${
+                        selected
+                          ? "border-primary bg-primary text-on-primary"
+                          : "border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      <Icon name={selected ? "check" : "add"} className="text-base" />
+                      {w.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </SectionBlock>
+        )}
 
         {/* ── รายละเอียดสินค้า ──────────────────────────── */}
         {!isNew && product && (

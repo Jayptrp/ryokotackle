@@ -5,9 +5,11 @@ import type {
   CarouselSlide,
   Category,
   CategoryCard,
+  FeaturedCategoryGroup,
   Product,
   ProductListItem,
   ProductQuery,
+  Warranty,
 } from "@/lib/types";
 
 export const DEFAULT_PAGE_SIZE = 24;
@@ -35,6 +37,7 @@ function mapListItem(row: any): ProductListItem {
     category: row.category
       ? { slug: row.category.slug, name: row.category.name, nameTh: row.category.name_th }
       : null,
+    brand: row.brand ? { slug: row.brand.slug, name: row.brand.name } : null,
     primaryImage: pickPrimaryImage(row.media ?? []),
     createdAt: row.created_at,
   };
@@ -51,12 +54,14 @@ function mapCategory(row: any): Category {
     sortOrder: row.sort_order,
     imageUrl: row.image_url ?? null,
     imageProductId: row.image_product_id ?? null,
+    disclaimer: row.disclaimer ?? null,
+    featuredBannerUrl: row.featured_banner_url ?? null,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const LIST_SELECT =
-  "id, slug, name, name_th, summary, status, created_at, category:categories!products_category_id_fkey(slug, name, name_th), media:product_media(url, type, is_primary, sort_order)";
+  "id, slug, name, name_th, summary, status, created_at, category:categories!products_category_id_fkey(slug, name, name_th), brand:brands!products_brand_id_fkey(slug, name), media:product_media(url, type, is_primary, sort_order)";
 
 /* --------------------------------------------------------------- categories */
 
@@ -70,7 +75,7 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("categories")
-    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id")
+    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id, disclaimer, featured_banner_url")
     .order("sort_order");
 
   const rows = data ?? [];
@@ -81,6 +86,17 @@ export const getCategories = cache(async (): Promise<Category[]> => {
       parentSlug: r.parent_id ? (byId.get(r.parent_id)?.slug ?? null) : null,
     }),
   );
+});
+
+/** All brands (slug + name), ordered with RYOKO first then alphabetical. */
+export const getBrands = cache(async (): Promise<{ slug: string; name: string }[]> => {
+  const supabase = createPublicClient();
+  const { data } = await supabase.from("brands").select("slug, name");
+  return (data ?? [])
+    .map((b) => ({ slug: b.slug, name: b.name }))
+    .sort((a, b) =>
+      a.slug === "ryoko" ? -1 : b.slug === "ryoko" ? 1 : a.name.localeCompare(b.name),
+    );
 });
 
 /** Top-level categories with their `children` nested. */
@@ -231,6 +247,37 @@ export async function getFeatured(limit?: number): Promise<ProductListItem[]> {
   return (data ?? []).map(mapListItem);
 }
 
+/**
+ * Featured products grouped under their top-level category, in category
+ * `sort_order`. Each group carries the category's admin-set 3:1 banner (or
+ * null). Only categories that actually have ≥1 published featured product are
+ * returned — so the homepage renders a category + banner only when the admin
+ * has featured something in it.
+ */
+export async function getFeaturedByCategory(): Promise<FeaturedCategoryGroup[]> {
+  const [featured, all] = await Promise.all([getFeatured(), getCategories()]);
+
+  // Map any category slug → its top-level slug (taxonomy is at most 2 deep).
+  const bySlug = new Map(all.map((c) => [c.slug, c]));
+  const topOf = (slug: string): string => bySlug.get(slug)?.parentSlug ?? slug;
+
+  const topLevel = all
+    .filter((c) => !c.parentSlug)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return topLevel
+    .map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      nameTh: c.nameTh,
+      bannerUrl: c.featuredBannerUrl,
+      products: featured.filter(
+        (p) => p.category && topOf(p.category.slug) === c.slug,
+      ),
+    }))
+    .filter((g) => g.products.length > 0);
+}
+
 export async function getNewArrivals(limit = 8): Promise<ProductListItem[]> {
   const supabase = createPublicClient();
   const { data } = await supabase
@@ -250,7 +297,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order)",
+      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, icon, color, sort_order))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -271,6 +318,8 @@ export async function getProductBySlug(
       sortOrder: row.category.sort_order,
       imageUrl: null,
       imageProductId: null,
+      disclaimer: row.category.disclaimer ?? null,
+      featuredBannerUrl: null,
       parentSlug: row.category.parent_id
         ? (all.find((c) => c.id === row.category.parent_id)?.slug ?? null)
         : null,
@@ -306,6 +355,11 @@ export async function getProductBySlug(
         sortOrder: c.sort_order,
       }))
       .sort((a: any, b: any) => a.sortOrder - b.sortOrder),
+    warranties: (row.warranties ?? [])
+      .map((w: any) => w.warranty)
+      .filter(Boolean)
+      .sort((a: any, b: any) => a.sort_order - b.sort_order)
+      .map((w: any) => ({ id: w.id, name: w.name, icon: w.icon, color: w.color })),
   };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }
@@ -332,7 +386,9 @@ export async function getCarouselSlides(): Promise<CarouselSlide[]> {
   const { data } = await supabase
     .from("carousel_slides")
     .select(
-      "id, image_url, title, subtitle, sort_order, product_id, product:products(name, name_th, media:product_media(url, type, is_primary, sort_order))",
+      "id, image_url, title, subtitle, sort_order, product_id, link_product_id, " +
+        "product:products!carousel_slides_product_id_fkey(name, name_th, media:product_media(url, type, is_primary, sort_order)), " +
+        "link_product:products!carousel_slides_link_product_id_fkey(slug)",
     )
     .order("sort_order");
 
@@ -351,6 +407,8 @@ export async function getCarouselSlides(): Promise<CarouselSlide[]> {
         subtitle: row.subtitle,
         sortOrder: row.sort_order,
         productId: row.product_id ?? null,
+        linkProductId: row.link_product_id ?? null,
+        linkProductSlug: row.link_product?.slug ?? null,
       } satisfies CarouselSlide;
     })
     .filter((s): s is CarouselSlide => s !== null);
@@ -376,4 +434,40 @@ export async function getPageBySlug(slug: string): Promise<PageContent | null> {
     .maybeSingle();
   if (!data) return null;
   return { title: data.title, titleTh: data.title_th, content: data.content };
+}
+
+/* -------------------------------------------------------------- warranties */
+
+/** All warranty types in display order (admin-editable). */
+export async function getWarranties(): Promise<Warranty[]> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("warranties")
+    .select("id, name, detail, icon, color, sort_order")
+    .order("sort_order");
+  return (data ?? []).map((w) => ({
+    id: w.id,
+    name: w.name,
+    detail: w.detail,
+    icon: w.icon,
+    color: w.color,
+    sortOrder: w.sort_order,
+  }));
+}
+
+/** Title + subtitle for the public warranty page (singleton, with fallbacks). */
+export async function getWarrantyPage(): Promise<{
+  title: string;
+  subtitle: string;
+}> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("warranty_page")
+    .select("title, subtitle")
+    .eq("id", 1)
+    .maybeSingle();
+  return {
+    title: data?.title?.trim() || "ประกันและอะไหล่",
+    subtitle: data?.subtitle?.trim() || "",
+  };
 }

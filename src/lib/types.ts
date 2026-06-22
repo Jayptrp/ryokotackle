@@ -17,7 +17,21 @@ export interface Category {
   imageUrl: string | null;
   /** Product whose primary image backs the card when no image is uploaded. */
   imageProductId: string | null;
+  /** Optional disclaimer shown between the header and products on the category page. */
+  disclaimer: string | null;
+  /** Admin-uploaded 3:1 banner shown above this category's featured products on the homepage. */
+  featuredBannerUrl: string | null;
   children?: Category[];
+}
+
+/** A top-level category's featured products on the homepage, with its banner. */
+export interface FeaturedCategoryGroup {
+  slug: string;
+  name: string;
+  nameTh: string | null;
+  /** Optional 3:1 banner shown above the product list (null = no banner). */
+  bannerUrl: string | null;
+  products: ProductListItem[];
 }
 
 /** Top-level category enriched with a resolved homepage card background. */
@@ -41,6 +55,23 @@ export interface CarouselSlide {
   sortOrder: number;
   /** Non-null when the slide is backed by a product (title is locked). */
   productId: string | null;
+  /** Product the slide links to when clicked (independent of image backing). */
+  linkProductId: string | null;
+  /** Slug of `linkProductId`'s product, for building the click-through href. */
+  linkProductSlug: string | null;
+}
+
+/** A warranty type — doubles as a product tag and carries the detail shown on
+ * the public warranty page. */
+export interface Warranty {
+  id: string;
+  name: string;
+  detail: string | null;
+  /** Material Symbols ligature for the badge icon. */
+  icon: string;
+  /** Color key from `src/lib/warranty-style.ts` (blue | red | navy | accent | neutral). */
+  color: string;
+  sortOrder: number;
 }
 
 export interface ProductMedia {
@@ -69,6 +100,7 @@ export interface ProductListItem {
   summary: string | null;
   status: ProductStatus;
   category: Pick<Category, "slug" | "name" | "nameTh"> | null;
+  brand: { slug: string; name: string } | null;
   primaryImage: string | null;
   createdAt: string;
 }
@@ -86,6 +118,8 @@ export interface Product {
   category: Category | null;
   media: ProductMedia[];
   channels: ProductChannel[];
+  /** Warranty tags assigned to this product (0..n). */
+  warranties: Pick<Warranty, "id" | "name" | "icon" | "color">[];
 }
 
 export interface ProductQuery {

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Centered, max-1280px content wrapper with the standard responsive gutters. */
+/** Centered content wrapper (max width = --container-max) with the standard responsive gutters. */
 export function Container({
   className,
   ...props
@@ -8,7 +8,7 @@ export function Container({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-[1280px] px-margin-mobile md:px-margin-desktop",
+        "mx-auto w-full max-w-[var(--container-max)] px-margin-mobile md:px-margin-desktop",
         className,
       )}
       {...props}

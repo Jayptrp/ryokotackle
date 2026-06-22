@@ -1,9 +1,10 @@
 import Link from "next/link";
 import {
   FeaturedManager,
-  type FeaturedRow,
+  type FeaturedCategoryRow,
 } from "@/components/admin/featured-manager";
 import { Icon } from "@/components/icon";
+import { getCategories } from "@/lib/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -20,20 +21,47 @@ function primaryImage(media: any[]): string | null {
 
 export default async function FeaturedAdminPage() {
   const supabase = await createAdminClient();
-  const { data } = await supabase
-    .from("products")
-    .select(
-      "id, name, name_th, is_featured, media:product_media(url, type, is_primary, sort_order)",
-    )
-    .order("name");
+  const [{ data }, all] = await Promise.all([
+    supabase
+      .from("products")
+      .select(
+        "id, name, name_th, is_featured, category_id, media:product_media(url, type, is_primary, sort_order)",
+      )
+      .eq("status", "published")
+      .order("name"),
+    getCategories(),
+  ]);
 
-  const rows: FeaturedRow[] = (data ?? []).map((p) => ({
-    id: p.id,
-    name: p.name,
-    nameTh: p.name_th,
-    isFeatured: p.is_featured,
-    image: primaryImage((p as { media?: unknown[] }).media ?? []),
-  }));
+  // Resolve any category id → its top-level category (taxonomy is at most 2 deep).
+  const byId = new Map(all.map((c) => [c.id, c]));
+  const bySlug = new Map(all.map((c) => [c.slug, c]));
+  const topOf = (categoryId: string | null) => {
+    const c = categoryId ? byId.get(categoryId) : undefined;
+    if (!c) return undefined;
+    return c.parentSlug ? bySlug.get(c.parentSlug) : c;
+  };
+
+  const topLevel = all
+    .filter((c) => !c.parentSlug)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const rows: FeaturedCategoryRow[] = topLevel
+    .map((cat) => ({
+      id: cat.id,
+      slug: cat.slug,
+      label: cat.nameTh ?? cat.name,
+      icon: cat.icon,
+      bannerUrl: cat.featuredBannerUrl,
+      products: (data ?? [])
+        .filter((p) => topOf(p.category_id)?.id === cat.id)
+        .map((p) => ({
+          id: p.id,
+          label: p.name_th ?? p.name,
+          image: primaryImage((p as { media?: unknown[] }).media ?? []),
+          isFeatured: p.is_featured,
+        })),
+    }))
+    .filter((row) => row.products.length > 0);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -49,9 +77,10 @@ export default async function FeaturedAdminPage() {
         </Link>
       </div>
       <p className="mb-6 font-body-sm text-body-sm text-on-surface-variant">
-        สินค้าที่ตั้งเป็น &quot;แนะนำ&quot; จะแสดงในส่วนสินค้าแนะนำบนหน้าแรกทั้งหมด (เฉพาะสินค้าที่เผยแพร่แล้ว)
+        แต่ละหมวดหมู่ อัปโหลดแบนเนอร์ (อัตราส่วน 3:1) และเลือกสินค้าแนะนำได้ — กดที่สินค้าเพื่อตั้ง/ยกเลิกแนะนำ
+        (สินค้าที่แนะนำจะมีขอบสีเขียว) หมวดหมู่จะแสดงบนหน้าแรกเฉพาะเมื่อมีสินค้าแนะนำอย่างน้อยหนึ่งรายการ
       </p>
-      <FeaturedManager initial={rows} />
+      <FeaturedManager categories={rows} />
     </div>
   );
 }

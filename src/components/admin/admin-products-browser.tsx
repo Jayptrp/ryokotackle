@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { Icon } from "@/components/icon";
+import { DeleteProductButton } from "@/components/admin/delete-product-button";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   published: { label: "เผยแพร่", color: "bg-secondary-container text-on-secondary-container" },
@@ -23,6 +24,8 @@ export interface AdminProduct {
   categorySlug: string | null;
   parentSlug: string | null;
   imageUrl: string | null;
+  hasSummary: boolean;
+  hasDescription: boolean;
 }
 
 export interface AdminCategory {
@@ -30,6 +33,21 @@ export interface AdminCategory {
   nameTh: string | null;
   name: string;
   parentSlug: string | null;
+}
+
+/** Small colored dot indicators for each SEO field. */
+function SeoGaps({ p }: { p: AdminProduct }) {
+  const gaps: string[] = [];
+  if (!p.imageUrl) gaps.push("รูป");
+  if (!p.nameTh) gaps.push("ชื่อไทย");
+  if (!p.hasSummary) gaps.push("สรุป");
+  if (!p.hasDescription) gaps.push("รายละเอียด");
+  if (gaps.length === 0) return null;
+  return (
+    <p className="mt-0.5 text-[10px] leading-tight text-error/60">
+      ขาด: {gaps.join(", ")}
+    </p>
+  );
 }
 
 export function AdminProductsBrowser({
@@ -42,6 +60,7 @@ export function AdminProductsBrowser({
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [seoFilter, setSeoFilter] = useState("");
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
@@ -50,24 +69,32 @@ export function AdminProductsBrowser({
       if (q && !p.name.toLowerCase().includes(lower) && !(p.nameTh?.toLowerCase().includes(lower))) return false;
       if (statusFilter && p.status !== statusFilter) return false;
       if (categoryFilter) {
-        // Match the category itself OR any of its sub-categories
         const isDirectMatch = p.categorySlug === categoryFilter;
         const isChildMatch = p.parentSlug === categoryFilter;
         if (!isDirectMatch && !isChildMatch) return false;
       }
+      if (seoFilter) {
+        const hasImage = !!p.imageUrl;
+        const hasNameTh = !!p.nameTh;
+        const allOk = hasImage && hasNameTh && p.hasSummary && p.hasDescription;
+        if (seoFilter === "any" && allOk) return false;
+        if (seoFilter === "no-image" && hasImage) return false;
+        if (seoFilter === "no-name-th" && hasNameTh) return false;
+        if (seoFilter === "no-summary" && p.hasSummary) return false;
+        if (seoFilter === "no-description" && p.hasDescription) return false;
+      }
       return true;
     });
-  }, [products, q, statusFilter, categoryFilter]);
+  }, [products, q, statusFilter, categoryFilter, seoFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const safePage = Math.min(page, Math.max(1, totalPages));
   const slice = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  function resetPage() {
-    setPage(1);
-  }
+  function resetPage() { setPage(1); }
 
   const parentCategories = categories.filter((c) => !c.parentSlug);
+  const hasAnyFilter = !!(q || statusFilter || categoryFilter || seoFilter);
 
   return (
     <div>
@@ -114,10 +141,22 @@ export function AdminProductsBrowser({
             </optgroup>
           ))}
         </select>
+        <select
+          value={seoFilter}
+          onChange={(e) => { setSeoFilter(e.target.value); resetPage(); }}
+          className="rounded-lg border border-outline-variant bg-white px-3 py-2 font-body-sm text-body-sm outline-none focus:border-primary"
+        >
+          <option value="">SEO ทั้งหมด</option>
+          <option value="any">มีข้อมูลไม่ครบ</option>
+          <option value="no-image">ไม่มีรูปภาพ</option>
+          <option value="no-name-th">ไม่มีชื่อไทย</option>
+          <option value="no-summary">ไม่มีคำอธิบายสั้น</option>
+          <option value="no-description">ไม่มีรายละเอียดสินค้า</option>
+        </select>
         <button
           type="button"
-          disabled={!q && !statusFilter && !categoryFilter}
-          onClick={() => { setQ(""); setStatusFilter(""); setCategoryFilter(""); resetPage(); }}
+          disabled={!hasAnyFilter}
+          onClick={() => { setQ(""); setStatusFilter(""); setCategoryFilter(""); setSeoFilter(""); resetPage(); }}
           className="rounded-lg px-4 py-2 font-label-caps text-label-caps transition-colors disabled:cursor-not-allowed disabled:opacity-30 enabled:text-on-surface-variant enabled:hover:text-primary"
         >
           ล้าง
@@ -172,10 +211,11 @@ export function AdminProductsBrowser({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-body-sm text-body-sm font-medium text-on-surface">{p.name}</p>
+                    <p className="font-body-sm text-body-sm font-medium text-on-surface">{p.nameTh ?? p.name}</p>
                     {p.nameTh && (
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">{p.nameTh}</p>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant">{p.name}</p>
                     )}
+                    <SeoGaps p={p} />
                   </td>
                   <td className="px-4 py-3 font-body-sm text-body-sm text-on-surface-variant">
                     {p.categoryLabel}
@@ -191,13 +231,15 @@ export function AdminProductsBrowser({
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/products/${p.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-                    >
-                      <Icon name="edit" className="text-base" />
-                      แก้ไข
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/products/${p.id}`}
+                        className="inline-flex items-center rounded-lg border border-outline-variant px-3 py-1.5 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <Icon name="edit" className="text-base" />
+                      </Link>
+                      <DeleteProductButton id={p.id} name={p.nameTh ?? p.name} compact />
+                    </div>
                   </td>
                 </tr>
               );

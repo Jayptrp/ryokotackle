@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 const NAV: { href: string; label: string; icon: string; exact?: boolean }[] = [
   { href: "/admin", label: "สินค้าทั้งหมด", icon: "inventory_2", exact: true },
   { href: "/admin/products/new", label: "เพิ่มสินค้าใหม่", icon: "add_circle" },
+  { href: "/admin/warranty", label: "ประกันและอะไหล่", icon: "verified_user" },
   { href: "/admin/pages/about", label: "แก้ไขหน้าเกี่ยวกับเรา", icon: "description" },
 ];
 
@@ -21,6 +22,7 @@ const HOME_NAV = {
     { href: "/admin/home/featured", label: "แก้ไขสินค้าแนะนำ", icon: "star" },
   ],
 } as const;
+
 
 export function Sidebar({ userEmail }: { userEmail?: string }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -141,6 +143,7 @@ export function Sidebar({ userEmail }: { userEmail?: string }) {
             </Link>
           );
         })}
+
       </nav>
 
       {/* User + sign out */}

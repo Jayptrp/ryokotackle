@@ -27,7 +27,8 @@ export function loadEnv() {
   const secret = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
   const publishable =
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return { url, secret, publishable };
+  const password = env.SUPABASE_PASSWORD || env.SUPABASE_DB_PASSWORD;
+  return { url, secret, publishable, password };
 }
 
 /** Create a Supabase client. Pass needWrite=true to require the secret key. */

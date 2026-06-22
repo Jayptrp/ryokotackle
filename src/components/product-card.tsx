@@ -20,7 +20,7 @@ export function ProductCard({
         {product.primaryImage ? (
           <Image
             src={product.primaryImage}
-            alt={product.name}
+            alt={product.nameTh ?? product.name}
             width={600}
             height={600}
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
@@ -37,16 +37,11 @@ export function ProductCard({
       </div>
       <div className="flex flex-col gap-1">
         <span className="font-label-caps text-label-caps text-secondary">
-          {product.category?.name ?? "RYOKO"}
+          {product.category?.nameTh ?? product.category?.name ?? "RYOKO"}
         </span>
-        <h3 className="font-headline-sm text-headline-sm text-on-surface transition-colors group-hover:text-primary">
-          {product.name}
+        <h3 className="font-headline-sm text-body-md md:text-headline-sm text-on-surface transition-colors group-hover:text-primary">
+          {product.nameTh ?? product.name}
         </h3>
-        {product.category && (
-          <p className="font-body-sm text-body-sm text-on-surface-variant">
-            {product.category.nameTh ?? product.category.name}
-          </p>
-        )}
       </div>
     </Link>
   );

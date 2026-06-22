@@ -8,8 +8,7 @@ import { ProductCard } from "@/components/product-card";
 import {
   getCarouselSlides,
   getCategoryCards,
-  getFeatured,
-  getNewArrivals,
+  getFeaturedByCategory,
 } from "@/lib/queries";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 
@@ -20,11 +19,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [slides, categories, featured, newArrivals] = await Promise.all([
+  const [slides, categories, featuredGroups] = await Promise.all([
     getCarouselSlides(),
     getCategoryCards(),
-    getFeatured(),
-    getNewArrivals(8),
+    getFeaturedByCategory(),
   ]);
 
   return (
@@ -36,12 +34,14 @@ export default async function HomePage() {
         และอุปกรณ์ตกปลาคุณภาพสูง
       </h1>
 
-      <Container className="pt-stack-md">
+      {/* Hero: full-bleed (edge-to-edge, square corners) on mobile + tablet;
+          contained with gutters + rounded corners from desktop (lg) up. */}
+      <div className="pt-stack-md lg:mx-auto lg:w-full lg:max-w-[var(--container-max)] lg:px-margin-desktop">
         <HeroCarousel slides={slides} />
-      </Container>
+      </div>
 
       {/* Categories */}
-      <section className="py-section-gap">
+      <section className="py-stack-lg md:py-section-gap">
         <Container>
           <div className="mb-stack-lg flex items-center justify-between">
             <h2 className="font-headline-md text-headline-md text-primary">
@@ -74,15 +74,9 @@ export default async function HomePage() {
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary" />
                 )}
-                {/* Readability scrim */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/25 to-transparent" />
-
-                {/* Footer: icon down on the left, beside the name */}
-                <div className="relative flex items-center gap-2 p-stack-md">
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition-colors group-hover:bg-secondary group-hover:text-on-secondary">
-                    <Icon name={category.icon ?? "category"} className="text-xl" />
-                  </span>
-                  <span className="font-body-md text-body-md font-medium text-on-primary">
+                {/* Name in a centered pill ("notch") at the bottom for readability */}
+                <div className="relative mb-stack-md flex justify-center px-2">
+                  <span className="rounded-full bg-primary/70 px-3 py-1 text-center font-body-md text-body-md font-medium text-on-primary backdrop-blur-sm transition-colors group-hover:bg-secondary group-hover:text-on-secondary">
                     {category.nameTh ?? category.name}
                   </span>
                 </div>
@@ -92,9 +86,11 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* Featured */}
-      {featured.length > 0 && (
-        <section className="pb-section-gap">
+      {/* Featured — grouped by top-level category; each group shows an optional
+          3:1 banner above its featured products. Only categories the admin has
+          featured products in appear (see getFeaturedByCategory). */}
+      {featuredGroups.length > 0 && (
+        <section className="pb-stack-lg md:pb-section-gap">
           <Container>
             <div className="mb-stack-lg">
               <h2 className="font-headline-md text-headline-md text-primary">
@@ -104,74 +100,55 @@ export default async function HomePage() {
                 อุปกรณ์ที่ทีมงานคัดสรร
               </p>
             </div>
-            <div className="-mx-margin-mobile flex gap-stack-md overflow-x-auto px-margin-mobile pb-stack-md no-scrollbar md:mx-0 md:px-0">
-              {featured.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  className="w-64 flex-none"
-                />
+
+            <div className="flex flex-col gap-stack-lg md:gap-section-gap">
+              {featuredGroups.map((group) => (
+                <div key={group.slug}>
+                  {/* 3:1 banner (only when the admin set one) */}
+                  {group.bannerUrl && (
+                    <Link
+                      href={`/category/${group.slug}`}
+                      className="relative mb-stack-md block aspect-[3/1] overflow-hidden rounded-xl border border-outline-variant transition-all hover:border-secondary hover:shadow-md"
+                    >
+                      <Image
+                        src={group.bannerUrl}
+                        alt={group.nameTh ?? group.name}
+                        fill
+                        sizes="(min-width: 1024px) 1200px, 100vw"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </Link>
+                  )}
+
+                  <div className="mb-stack-md flex items-center justify-between">
+                    <h3 className="font-headline-sm text-headline-sm text-primary">
+                      {group.nameTh ?? group.name}
+                    </h3>
+                    <Link
+                      href={`/category/${group.slug}`}
+                      className="flex items-center gap-1 font-label-caps text-label-caps text-secondary transition-all hover:gap-2"
+                    >
+                      ดูทั้งหมด <Icon name="arrow_forward" className="text-sm" />
+                    </Link>
+                  </div>
+
+                  <div className="-mx-margin-mobile flex gap-stack-md overflow-x-auto px-margin-mobile pb-stack-md scroll-x-touch md:mx-0 md:px-0">
+                    {group.products.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        className="w-44 flex-none sm:w-48"
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </Container>
         </section>
       )}
 
-      {/* New arrivals */}
-      {newArrivals.length > 0 && (
-        <section className="pb-section-gap">
-          <Container>
-            <div className="mb-stack-lg flex items-end justify-between">
-              <div>
-                <h2 className="font-headline-md text-headline-md text-primary">
-                  มาใหม่
-                </h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  สินค้าล่าสุดในแคตตาล็อก
-                </p>
-              </div>
-              <Link
-                href="/products?sort=newest"
-                className="flex items-center gap-1 font-label-caps text-label-caps text-secondary transition-all hover:gap-2"
-              >
-                ดูทั้งหมด <Icon name="arrow_forward" className="text-sm" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-gutter sm:grid-cols-3 lg:grid-cols-4">
-              {newArrivals.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
-
-      {/* Newsletter CTA */}
-      <section className="mb-section-gap">
-        <Container>
-          <div className="flex flex-col items-center rounded-xl bg-primary-container p-stack-lg text-center md:p-16">
-            <h2 className="font-headline-lg text-headline-lg text-on-primary">
-              ร่วมเป็นส่วนหนึ่งของวิถีแห่ง Ryoko
-            </h2>
-            <p className="mt-stack-sm max-w-2xl font-body-lg text-body-lg text-on-primary/70">
-              ติดตามข่าวสาร สินค้าใหม่ และเทคนิคการตกปลาแบบมืออาชีพ
-            </p>
-            <form className="mt-stack-lg flex w-full max-w-lg flex-col gap-stack-sm md:flex-row">
-              <input
-                type="email"
-                placeholder="อีเมลของคุณ"
-                className="flex-grow rounded-lg border border-white/20 bg-white/10 px-6 py-4 text-white outline-none transition-all placeholder:text-white/50 focus:ring-1 focus:ring-secondary"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-secondary px-8 py-4 font-label-caps text-label-caps text-on-secondary transition-all hover:bg-on-secondary-container"
-              >
-                สมัครสมาชิก
-              </button>
-            </form>
-          </div>
-        </Container>
-      </section>
     </>
   );
 }

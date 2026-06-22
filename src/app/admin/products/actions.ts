@@ -5,11 +5,134 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function slugify(str: string) {
-  return str
+  const s = str
     .toLowerCase()
-    .replace(/[^a-z0-9฀-๿]+/g, "-")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 100);
+  return s || "product";
+}
+
+/**
+ * Revalidate the `/category/{slug}` pages affected when a product's category
+ * changes. Category pages are statically prerendered and each one lists its own
+ * products PLUS its direct children's, so for every given category id we
+ * invalidate that category's page AND its parent's. Pass the product's old and
+ * new category ids; nulls/unknown ids are ignored.
+ */
+async function revalidateCategoryPaths(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  categoryIds: (string | null | undefined)[],
+) {
+  const ids = categoryIds.filter((x): x is string => !!x);
+  if (!ids.length) return;
+
+  const { data } = await supabase
+    .from("categories")
+    .select("id, slug, parent_id");
+  if (!data) return;
+
+  const byId = new Map(data.map((c) => [c.id, c]));
+  const slugs = new Set<string>();
+  for (const id of ids) {
+    const cat = byId.get(id);
+    if (!cat) continue;
+    slugs.add(cat.slug);
+    if (cat.parent_id) {
+      const parent = byId.get(cat.parent_id);
+      if (parent) slugs.add(parent.slug);
+    }
+  }
+  for (const slug of slugs) revalidatePath(`/category/${slug}`);
+}
+
+/**
+ * Insert a category (parentId = null) or subcategory on the fly. Name is used
+ * for both EN and TH; slug is derived and de-duplicated. Returns the new row.
+ * Caller is responsible for revalidation.
+ */
+async function insertCategory(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  name: string,
+  parentId: string | null,
+): Promise<{ id: string; slug: string; name: string }> {
+  const clean = name.trim();
+  if (!clean) throw new Error("Category name is required");
+
+  const base = slugify(clean) || "category";
+  let slug = base;
+  let attempt = 0;
+  while (true) {
+    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
+    const { data } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!data) {
+      slug = candidate;
+      break;
+    }
+    attempt++;
+  }
+
+  const { data: last } = await supabase
+    .from("categories")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      name: clean,
+      name_th: clean,
+      slug,
+      parent_id: parentId,
+      sort_order: (last?.sort_order ?? 0) + 10,
+    })
+    .select("id, slug, name")
+    .single();
+  if (error) throw error;
+  return { id: data.id, slug: data.slug, name: data.name };
+}
+
+// Sentinels the CategorySelect submits for not-yet-created categories. Kept in
+// sync with src/components/admin/category-select.tsx.
+const NEW_TOP = "__new_top__";
+const NEW_SUB = "__new_sub__";
+
+/**
+ * Resolve the product's `category_id` from the form, creating any pending new
+ * category/subcategory first (deferred from the editor until this save). New
+ * categories are created here — never on click in the editor.
+ */
+async function resolveCategoryId(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  formData: FormData,
+): Promise<string | null> {
+  const categoryId = (formData.get("category_id") as string) || null;
+
+  if (categoryId === NEW_TOP) {
+    const name = ((formData.get("new_top_name") as string) || "").trim();
+    if (!name) return null;
+    return (await insertCategory(supabase, name, null)).id;
+  }
+
+  if (categoryId === NEW_SUB) {
+    const name = ((formData.get("new_sub_name") as string) || "").trim();
+    if (!name) return null;
+    let parentId = (formData.get("new_sub_parent_id") as string) || null;
+    if (parentId === NEW_TOP) {
+      const topName = ((formData.get("new_top_name") as string) || "").trim();
+      if (!topName) return null;
+      parentId = (await insertCategory(supabase, topName, null)).id;
+    }
+    return (await insertCategory(supabase, name, parentId)).id;
+  }
+
+  return categoryId;
 }
 
 async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminClient>>, base: string, excludeId?: string) {
@@ -86,6 +209,7 @@ export async function saveProduct(formData: FormData) {
   };
 
   let productId = id;
+  let oldCategoryId: string | null = null;
   if (isNew) {
     const { data, error } = await supabase
       .from("products")
@@ -95,6 +219,15 @@ export async function saveProduct(formData: FormData) {
     if (error) throw error;
     productId = data.id;
   } else {
+    // Capture the previous category before overwriting it, so we can also
+    // revalidate the category page the product is moving *away* from.
+    const { data: prev } = await supabase
+      .from("products")
+      .select("category_id")
+      .eq("id", id!)
+      .single();
+    oldCategoryId = prev?.category_id ?? null;
+
     const { error } = await supabase
       .from("products")
       .update(payload)
@@ -106,6 +239,7 @@ export async function saveProduct(formData: FormData) {
   revalidatePath(`/products/${slug}`);
   revalidatePath("/");
   revalidatePath("/admin");
+  await revalidateCategoryPaths(supabase, [oldCategoryId, categoryId]);
 
   if (isNew) redirect(`/admin/products/${productId}`);
 }
@@ -222,7 +356,7 @@ export async function saveDescription(formData: FormData) {
 
 interface PendingMedia {
   id: string; url: string; type: string; provider: string | null;
-  sortOrder: number; isPrimary: boolean; isNew?: boolean;
+  sortOrder: number; isPrimary: boolean; isNew?: boolean; alt?: string | null;
 }
 
 /**
@@ -237,13 +371,15 @@ export async function saveProductAll(formData: FormData) {
   const nameTh = (formData.get("name_th") as string)?.trim() || null;
   const summary = (formData.get("summary") as string)?.trim() || null;
   const description = (formData.get("description") as string) || null;
-  const categoryId = (formData.get("category_id") as string) || null;
+  const brandId = (formData.get("brand_id") as string) || null;
+  const categoryId = await resolveCategoryId(supabase, formData);
   const status = (formData.get("status") as string) || "draft";
   const isFeatured = formData.getAll("is_featured").includes("true");
 
   const mediaCurrent: PendingMedia[] = JSON.parse((formData.get("media_current") as string) || "[]");
   const mediaDeleted: { id: string; url: string }[] = JSON.parse((formData.get("media_deleted") as string) || "[]");
   const channels: { channel: string; url: string }[] = JSON.parse((formData.get("channels_json") as string) || "[]");
+  const warrantyIds: string[] = JSON.parse((formData.get("warranties_json") as string) || "[]");
 
   if (!name) return;
 
@@ -263,14 +399,28 @@ export async function saveProductAll(formData: FormData) {
     status: status as never,
     is_featured: isFeatured,
     slug,
+    // brand_id is NOT NULL (defaults to RYOKO). Only set it when provided so we
+    // never write null — on insert the DB default applies, on update the
+    // existing value is kept.
+    ...(brandId ? { brand_id: brandId } : {}),
   };
 
   let productId = id;
+  let oldCategoryId: string | null = null;
   if (isNew) {
     const { data, error } = await supabase.from("products").insert(payload).select("id, slug").single();
     if (error) throw error;
     productId = data.id;
   } else {
+    // Capture the previous category before overwriting it, so we can also
+    // revalidate the category page the product is moving *away* from.
+    const { data: prev } = await supabase
+      .from("products")
+      .select("category_id")
+      .eq("id", id!)
+      .single();
+    oldCategoryId = prev?.category_id ?? null;
+
     const { error } = await supabase.from("products").update(payload).eq("id", id!);
     if (error) throw error;
   }
@@ -294,14 +444,14 @@ export async function saveProductAll(formData: FormData) {
       provider: (item.provider as never) ?? null,
       sort_order: item.sortOrder,
       is_primary: item.isPrimary,
-      alt: null,
+      alt: item.alt ?? null,
     });
   }
 
-  // Update sort_order + is_primary for existing media
+  // Update sort_order + is_primary + alt for existing media
   for (const item of mediaCurrent.filter((m) => !m.isNew)) {
     await supabase.from("product_media")
-      .update({ sort_order: item.sortOrder, is_primary: item.isPrimary })
+      .update({ sort_order: item.sortOrder, is_primary: item.isPrimary, alt: item.alt ?? null })
       .eq("id", item.id);
   }
 
@@ -312,87 +462,54 @@ export async function saveProductAll(formData: FormData) {
       .filter((c) => c.channel && c.url)
       .map((c, i) => ({ product_id: productId!, channel: c.channel as never, url: c.url, sort_order: i }));
     if (channelRows.length) await supabase.from("product_channels").insert(channelRows);
+
+    // Save warranty tags (delete-all + re-insert)
+    await supabase.from("product_warranties").delete().eq("product_id", productId!);
+    const warrantyRows = warrantyIds.map((warranty_id) => ({
+      product_id: productId!,
+      warranty_id,
+    }));
+    if (warrantyRows.length) await supabase.from("product_warranties").insert(warrantyRows);
   }
 
   revalidatePath("/products");
   revalidatePath(`/products/${slug}`);
   revalidatePath("/");
   revalidatePath("/admin");
+  await revalidateCategoryPaths(supabase, [oldCategoryId, categoryId]);
 
   redirect(isNew ? `/admin/products/${productId}` : `/admin/products/${id}`);
 }
 
-/** Delete a product entirely. */
+/** Delete a product entirely, including its Storage files. */
 export async function deleteProduct(id: string) {
   const supabase = await createAdminClient();
   const { data } = await supabase
     .from("products")
-    .select("slug")
+    .select("slug, category_id, description, media:product_media(url)")
     .eq("id", id)
     .single();
+
+  // The FK cascade removes product_media/channels/carousel ROWS, but not the
+  // Storage objects — so gather every product-media path (gallery images plus
+  // inline images embedded in the description) and remove the files first,
+  // otherwise deleting a product silently orphans its images.
+  const paths = new Set<string>();
+  const collect = (s?: string | null) => {
+    if (!s) return;
+    for (const m of s.matchAll(/\/storage\/v1\/object\/public\/product-media\/([^"'\s)?]+)/g))
+      paths.add(m[1]);
+  };
+  for (const item of (data?.media ?? []) as { url: string | null }[]) collect(item.url);
+  collect(data?.description);
+  if (paths.size) await supabase.storage.from("product-media").remove([...paths]);
 
   await supabase.from("products").delete().eq("id", id);
 
   revalidatePath("/products");
   revalidatePath("/admin");
   if (data?.slug) revalidatePath(`/products/${data.slug}`);
+  await revalidateCategoryPaths(supabase, [data?.category_id]);
   redirect("/admin");
 }
 
-/**
- * Create a category (parentId = null) or subcategory (parentId set) on the fly
- * from the product editor. Name is used for both EN and TH; slug is derived and
- * de-duplicated. Returns the new row so the editor can select it immediately.
- */
-export async function createCategory(
-  name: string,
-  parentId: string | null,
-): Promise<{ id: string; slug: string; name: string }> {
-  const supabase = await createAdminClient();
-  const clean = name.trim();
-  if (!clean) throw new Error("Category name is required");
-
-  // Unique slug among categories.
-  const base = slugify(clean) || "category";
-  let slug = base;
-  let attempt = 0;
-  while (true) {
-    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
-    const { data } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("slug", candidate)
-      .maybeSingle();
-    if (!data) {
-      slug = candidate;
-      break;
-    }
-    attempt++;
-  }
-
-  const { data: last } = await supabase
-    .from("categories")
-    .select("sort_order")
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data, error } = await supabase
-    .from("categories")
-    .insert({
-      name: clean,
-      name_th: clean,
-      slug,
-      parent_id: parentId,
-      sort_order: (last?.sort_order ?? 0) + 10,
-    })
-    .select("id, slug, name")
-    .single();
-  if (error) throw error;
-
-  revalidatePath("/");
-  revalidatePath("/products");
-  revalidatePath("/admin");
-
-  return { id: data.id, slug: data.slug, name: data.name };
-}

@@ -186,6 +186,10 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
     onItemsChange(reindex(items.map((m) => (m.id === item.id ? { ...m, isDeleted: true } : m))));
   }
 
+  function handleAltChange(id: string, value: string) {
+    onItemsChange(items.map((m) => (m.id === id ? { ...m, alt: value || null } : m)));
+  }
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-3">
@@ -202,18 +206,18 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
               onDragOver={(e) => onInternalDragOver(e, index)}
               onDrop={onInternalDrop}
               onDragEnd={onInternalDragEnd}
-              className="relative h-28 w-28 flex-none"
+              className="relative flex w-28 flex-none flex-col gap-1"
             >
-              {/* Insertion Bar Indicator */}
+              {/* Insertion Bar Indicator — pinned to image height only */}
               {showBarBefore && (
-                <div className="absolute -left-[7px] top-0 bottom-0 z-30 w-1 rounded-full bg-primary animate-pulse" />
+                <div className="absolute -left-[7px] top-0 z-30 h-28 w-1 rounded-full bg-primary animate-pulse" />
               )}
               {showBarAfter && (
-                <div className="absolute -right-[7px] top-0 bottom-0 z-30 w-1 rounded-full bg-primary animate-pulse" />
+                <div className="absolute -right-[7px] top-0 z-30 h-28 w-1 rounded-full bg-primary animate-pulse" />
               )}
 
               <div className={cn(
-                "group relative h-full w-full overflow-hidden rounded-lg border transition-all duration-200",
+                "group relative h-28 w-full overflow-hidden rounded-lg border transition-all duration-200",
                 isBeingDragged 
                   ? "border-dashed border-outline-variant bg-surface-container opacity-40 grayscale" 
                   : "border-outline-variant bg-surface-container-low shadow-sm hover:shadow-md hover:border-primary/50"
@@ -264,6 +268,16 @@ export function MediaManager({ productId, items, onItemsChange }: Props) {
                   </>
                 )}
               </div>
+
+              {/* Alt text — one line per thumbnail, persisted on save */}
+              <input
+                type="text"
+                value={item.alt ?? ""}
+                onChange={(e) => handleAltChange(item.id, e.target.value)}
+                onDragStart={(e) => e.stopPropagation()}
+                placeholder="alt text..."
+                className="w-full rounded border border-outline-variant bg-white px-1.5 py-0.5 text-[11px] text-on-surface outline-none focus:border-primary"
+              />
             </div>
           );
         })}

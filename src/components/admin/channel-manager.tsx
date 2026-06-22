@@ -1,6 +1,7 @@
 "use client";
 
 import { CHANNEL_META } from "@/lib/channels";
+import { BrandIcon } from "@/components/brand-icon";
 import { Icon } from "@/components/icon";
 import type { SalesChannel } from "@/lib/types";
 
@@ -41,7 +42,7 @@ export function ChannelManager({ rows, onRowsChange }: Props) {
               className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-white"
               style={{ backgroundColor: meta.color }}
             >
-              <Icon name={meta.icon} className="text-base" />
+              <BrandIcon name={row.channel} fallback={meta.icon} className="text-base" />
             </span>
             <select
               value={row.channel}
