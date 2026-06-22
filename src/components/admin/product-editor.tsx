@@ -5,6 +5,7 @@ import { useState, useTransition, useRef } from "react";
 import { saveProductAll } from "@/app/admin/products/actions";
 import { CategorySelect } from "@/components/admin/category-select";
 import { ProductNameField } from "@/components/admin/product-name-field";
+import { SummaryEditor } from "@/components/admin/summary-editor";
 import { TiptapEditor } from "@/components/admin/tiptap-editor";
 import { MediaManager, type PendingMedia } from "@/components/admin/media-manager";
 import { ChannelManager, type ChannelRow } from "@/components/admin/channel-manager";
@@ -157,6 +158,7 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
   // Keys to force-remount components that manage their own internal state
   const [nameKey, setNameKey] = useState(0);
   const [categoryKey, setCategoryKey] = useState(0);
+  const [summaryKey, setSummaryKey] = useState(0);
   const [descriptionKey, setDescriptionKey] = useState(0);
 
   // ── original values (never mutated after init) ────────────────────────────
@@ -216,6 +218,7 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
   }
   function revertSummary() {
     setSummary(orig.current.summary ?? "");
+    setSummaryKey((k) => k + 1); // remount editor with original content
   }
   function revertChannels() {
     setChannels(orig.current.channels);
@@ -415,17 +418,15 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
         <div className={`grid grid-cols-1 gap-6 ${!isNew && product ? "md:grid-cols-2" : ""}`}>
           <SectionBlock
             title="คำอธิบายสั้น"
-            subtitle="แสดงใต้ชื่อสินค้า ควรสั้นกระชับ (1–2 ประโยค)"
+            subtitle="แสดงใต้ชื่อสินค้า"
             isDirty={sectionDirty.summary}
             onRevert={revertSummary}
           >
-            <textarea
+            <SummaryEditor
+              key={`summary-${summaryKey}`}
               name="summary"
-              rows={5}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              className={`w-full resize-none rounded-lg border bg-white px-4 py-3 font-body-md text-body-md outline-none ${inputCls(d.summary)}`}
-              placeholder="เช่น: รอกหยดน้ำระดับพรีเมียม สเปคญี่ปุ่นแท้ พร้อมระบบเบรก X-Drag"
+              defaultValue={orig.current.summary || ""}
+              onUpdate={setSummary}
             />
           </SectionBlock>
 

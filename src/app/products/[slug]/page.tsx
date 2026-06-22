@@ -53,7 +53,7 @@ export async function generateMetadata({
   // Description: prefer the brief summary, fall back to the rich detail, then
   // a generated line that still carries the core keywords.
   const description =
-    product.summary?.trim() ||
+    (product.summary ? toMetaDescription(product.summary) : "") ||
     (product.description ? toMetaDescription(product.description) : "") ||
     `${displayName} — ${
       product.category?.nameTh ?? product.category?.name ?? "อุปกรณ์ตกปลา"
@@ -114,7 +114,7 @@ export default async function ProductDetailPage({
       ? { alternateName: product.name }
       : {}),
     ...(productImages.length ? { image: productImages } : {}),
-    ...(product.summary ? { description: product.summary } : {}),
+    ...(product.summary ? { description: toMetaDescription(product.summary) } : {}),
     ...(category
       ? { category: category.nameTh ?? category.name }
       : {}),
@@ -215,9 +215,10 @@ export default async function ProductDetailPage({
               )}
             </div>
             {product.summary && (
-              <p className="mt-4 font-body-lg text-body-lg text-on-surface-variant">
-                {product.summary}
-              </p>
+              <RichContent
+                html={product.summary}
+                className="mt-4 [&_p]:font-body-lg [&_p]:text-body-lg [&_p]:text-on-surface-variant"
+              />
             )}
           </div>
 
@@ -266,7 +267,7 @@ export default async function ProductDetailPage({
           )}
 
           {product.description && (
-            <ScrollToButton targetId="product-detail" label="ดูรายละเอียด" />
+            <ScrollToButton targetId="product-detail" label="ดูรายละเอียดสินค้า" />
           )}
         </div>
       </div>
