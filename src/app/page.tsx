@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/product-card";
 import {
   getCarouselSlides,
   getCategoryCards,
-  getFeatured,
+  getFeaturedByCategory,
 } from "@/lib/queries";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 
@@ -19,10 +19,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [slides, categories, featured] = await Promise.all([
+  const [slides, categories, featuredGroups] = await Promise.all([
     getCarouselSlides(),
     getCategoryCards(),
-    getFeatured(),
+    getFeaturedByCategory(),
   ]);
 
   return (
@@ -86,8 +86,10 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* Featured */}
-      {featured.length > 0 && (
+      {/* Featured — grouped by top-level category; each group shows an optional
+          3:1 banner above its featured products. Only categories the admin has
+          featured products in appear (see getFeaturedByCategory). */}
+      {featuredGroups.length > 0 && (
         <section className="pb-stack-lg md:pb-section-gap">
           <Container>
             <div className="mb-stack-lg">
@@ -98,13 +100,49 @@ export default async function HomePage() {
                 อุปกรณ์ที่ทีมงานคัดสรร
               </p>
             </div>
-            <div className="-mx-margin-mobile flex gap-stack-md overflow-x-auto px-margin-mobile pb-stack-md scroll-x-touch md:mx-0 md:px-0">
-              {featured.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  className="w-44 flex-none sm:w-48"
-                />
+
+            <div className="flex flex-col gap-stack-lg md:gap-section-gap">
+              {featuredGroups.map((group) => (
+                <div key={group.slug}>
+                  {/* 3:1 banner (only when the admin set one) */}
+                  {group.bannerUrl && (
+                    <Link
+                      href={`/category/${group.slug}`}
+                      className="relative mb-stack-md block aspect-[3/1] overflow-hidden rounded-xl border border-outline-variant transition-all hover:border-secondary hover:shadow-md"
+                    >
+                      <Image
+                        src={group.bannerUrl}
+                        alt={group.nameTh ?? group.name}
+                        fill
+                        sizes="(min-width: 1024px) 1200px, 100vw"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </Link>
+                  )}
+
+                  <div className="mb-stack-md flex items-center justify-between">
+                    <h3 className="font-headline-sm text-headline-sm text-primary">
+                      {group.nameTh ?? group.name}
+                    </h3>
+                    <Link
+                      href={`/category/${group.slug}`}
+                      className="flex items-center gap-1 font-label-caps text-label-caps text-secondary transition-all hover:gap-2"
+                    >
+                      ดูทั้งหมด <Icon name="arrow_forward" className="text-sm" />
+                    </Link>
+                  </div>
+
+                  <div className="-mx-margin-mobile flex gap-stack-md overflow-x-auto px-margin-mobile pb-stack-md scroll-x-touch md:mx-0 md:px-0">
+                    {group.products.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        className="w-44 flex-none sm:w-48"
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </Container>

@@ -19,7 +19,19 @@ export interface Category {
   imageProductId: string | null;
   /** Optional disclaimer shown between the header and products on the category page. */
   disclaimer: string | null;
+  /** Admin-uploaded 3:1 banner shown above this category's featured products on the homepage. */
+  featuredBannerUrl: string | null;
   children?: Category[];
+}
+
+/** A top-level category's featured products on the homepage, with its banner. */
+export interface FeaturedCategoryGroup {
+  slug: string;
+  name: string;
+  nameTh: string | null;
+  /** Optional 3:1 banner shown above the product list (null = no banner). */
+  bannerUrl: string | null;
+  products: ProductListItem[];
 }
 
 /** Top-level category enriched with a resolved homepage card background. */

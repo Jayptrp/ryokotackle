@@ -152,15 +152,22 @@ export async function saveCategoriesAll(input: {
 /* ------------------------------------------------------------- featured */
 
 /**
- * Persist featured-flag changes in one call — the unified-save analog of
- * `saveCarousel`. The client stages toggles locally and sends only the rows
- * that actually flipped: `featured` get the flag set, `unfeatured` cleared.
+ * Persist the whole "แก้ไขสินค้าแนะนำ" page in one call — the unified-save
+ * analog of `saveCarousel`. The client stages everything locally and sends:
+ *   - `featured` / `unfeatured`: product ids whose is_featured flag flipped.
+ *   - `banners`: the per-category 3:1 banner URL (null clears it). Only the
+ *     categories whose banner actually changed are sent.
+ * Banners follow the same convention as category card images: replacing an
+ * uploaded banner just overwrites the URL (old Storage object is left in place,
+ * matching `saveCategoriesAll`).
  */
 export async function saveFeatured(input: {
   featured: string[];
   unfeatured: string[];
+  banners: { categoryId: string; bannerUrl: string | null }[];
 }) {
   const supabase = await createAdminClient();
+
   if (input.featured.length) {
     const { error } = await supabase
       .from("products")
@@ -175,6 +182,20 @@ export async function saveFeatured(input: {
       .in("id", input.unfeatured);
     if (error) throw error;
   }
+
+  if (input.banners.length) {
+    const results = await Promise.all(
+      input.banners.map((b) =>
+        supabase
+          .from("categories")
+          .update({ featured_banner_url: b.bannerUrl })
+          .eq("id", b.categoryId),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw failed.error;
+  }
+
   revalidatePath("/");
   revalidatePath("/admin/home/featured");
 }

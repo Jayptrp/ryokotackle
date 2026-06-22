@@ -5,6 +5,7 @@ import type {
   CarouselSlide,
   Category,
   CategoryCard,
+  FeaturedCategoryGroup,
   Product,
   ProductListItem,
   ProductQuery,
@@ -54,6 +55,7 @@ function mapCategory(row: any): Category {
     imageUrl: row.image_url ?? null,
     imageProductId: row.image_product_id ?? null,
     disclaimer: row.disclaimer ?? null,
+    featuredBannerUrl: row.featured_banner_url ?? null,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -73,7 +75,7 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("categories")
-    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id, disclaimer")
+    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id, disclaimer, featured_banner_url")
     .order("sort_order");
 
   const rows = data ?? [];
@@ -245,6 +247,37 @@ export async function getFeatured(limit?: number): Promise<ProductListItem[]> {
   return (data ?? []).map(mapListItem);
 }
 
+/**
+ * Featured products grouped under their top-level category, in category
+ * `sort_order`. Each group carries the category's admin-set 3:1 banner (or
+ * null). Only categories that actually have ≥1 published featured product are
+ * returned — so the homepage renders a category + banner only when the admin
+ * has featured something in it.
+ */
+export async function getFeaturedByCategory(): Promise<FeaturedCategoryGroup[]> {
+  const [featured, all] = await Promise.all([getFeatured(), getCategories()]);
+
+  // Map any category slug → its top-level slug (taxonomy is at most 2 deep).
+  const bySlug = new Map(all.map((c) => [c.slug, c]));
+  const topOf = (slug: string): string => bySlug.get(slug)?.parentSlug ?? slug;
+
+  const topLevel = all
+    .filter((c) => !c.parentSlug)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return topLevel
+    .map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      nameTh: c.nameTh,
+      bannerUrl: c.featuredBannerUrl,
+      products: featured.filter(
+        (p) => p.category && topOf(p.category.slug) === c.slug,
+      ),
+    }))
+    .filter((g) => g.products.length > 0);
+}
+
 export async function getNewArrivals(limit = 8): Promise<ProductListItem[]> {
   const supabase = createPublicClient();
   const { data } = await supabase
@@ -286,6 +319,7 @@ export async function getProductBySlug(
       imageUrl: null,
       imageProductId: null,
       disclaimer: row.category.disclaimer ?? null,
+      featuredBannerUrl: null,
       parentSlug: row.category.parent_id
         ? (all.find((c) => c.id === row.category.parent_id)?.slug ?? null)
         : null,
