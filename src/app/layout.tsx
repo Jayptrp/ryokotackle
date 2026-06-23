@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { JsonLd } from "@/components/json-ld";
+import { LanguageProvider } from "@/components/i18n/language-provider";
 import { getCategoryTree } from "@/lib/queries";
 import {
   SITE_URL,
@@ -114,9 +115,11 @@ export default async function RootLayout({
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-on-background selection:bg-secondary-container">
         <JsonLd data={organizationLd} />
         <JsonLd data={websiteLd} />
-        <SiteHeader categories={categories} />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        <LanguageProvider>
+          <SiteHeader categories={categories} />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </LanguageProvider>
       </body>
     </html>
   );

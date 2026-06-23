@@ -1,7 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
+import { LocalizedName } from "@/components/i18n/localized";
 import type { ProductListItem } from "@/lib/types";
 
 export function ProductCard({
@@ -37,10 +40,17 @@ export function ProductCard({
       </div>
       <div className="flex flex-col gap-1">
         <span className="font-label-caps text-label-caps text-secondary">
-          {product.category?.nameTh ?? product.category?.name ?? "RYOKO"}
+          {product.category ? (
+            <LocalizedName
+              th={product.category.nameTh}
+              other={product.category.name}
+            />
+          ) : (
+            "RYOKO"
+          )}
         </span>
         <h3 className="font-headline-sm text-body-md md:text-headline-sm text-on-surface transition-colors group-hover:text-primary">
-          {product.nameTh ?? product.name}
+          <LocalizedName th={product.nameTh} other={product.name} />
         </h3>
       </div>
     </Link>

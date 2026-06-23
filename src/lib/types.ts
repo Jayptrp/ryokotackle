@@ -113,6 +113,10 @@ export interface Product {
   nameTh: string | null;
   summary: string | null;
   description: string | null;
+  /** Non-Thai translations of `summary`, keyed by locale (en/vi/id/ms). */
+  summaryI18n: Record<string, string>;
+  /** Non-Thai translations of `description`, keyed by locale (en/vi/id/ms). */
+  descriptionI18n: Record<string, string>;
   status: ProductStatus;
   isFeatured: boolean;
   category: Category | null;
