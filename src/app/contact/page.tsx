@@ -1,34 +1,40 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
+import { BrandIcon } from "@/components/brand-icon";
+import { getContactCards, getContactPage } from "@/lib/queries";
 import { COMPANY } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "ติดต่อเรา — Ryoko Tackle",
 };
 
-const INFO_CARDS = [
-  { icon: "phone", label: "โทรศัพท์", value: COMPANY.phone },
-  { icon: "smartphone", label: "มือถือ", value: COMPANY.mobile },
-  { icon: "mail", label: "อีเมล", value: COMPANY.email },
-  { icon: "chat", label: "LINE", value: COMPANY.line },
-] as const;
+// Default store coordinates (used when the admin hasn't set a pin).
+const DEFAULT_LAT = 13.6812373;
+const DEFAULT_LNG = 100.7127972;
 
-const SOCIALS = [
-  { icon: "thumb_up", label: "Facebook", href: "https://www.facebook.com/ryoko.tackle" },
-  { icon: "music_note", label: "TikTok", href: "https://www.tiktok.com/@ryoko.tackle" },
-  { icon: "photo_camera", label: "Instagram", href: "https://www.instagram.com/ryoko.tackle" },
-  { icon: "play_circle", label: "YouTube", href: "https://www.youtube.com/@ryoko.tackle" },
-] as const;
+export default async function ContactPage() {
+  const [contact, infoCards] = await Promise.all([
+    getContactPage(),
+    getContactCards(),
+  ]);
 
-// Exact store coordinates (geocoded). Interactive OpenStreetMap embed + an
-// "open in Google Maps" link.
-const LAT = 13.6812373;
-const LNG = 100.7127972;
-const MAP_EMBED = `https://www.openstreetmap.org/export/embed.html?bbox=${LNG - 0.005}%2C${LAT - 0.0035}%2C${LNG + 0.005}%2C${LAT + 0.0035}&layer=mapnik&marker=${LAT}%2C${LNG}`;
-const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${LAT},${LNG}`;
+  const intro =
+    contact?.intro?.trim() ||
+    "Ryoko Tackle พร้อมมอบบริการระดับพรีเมียมและการสนับสนุนจากทีมงานมืออาชีพ เพื่อตอบโจทย์ทุกความต้องการของนักตกปลา";
 
-export default function ContactPage() {
+  const locationDesc =
+    contact?.locationDesc?.trim() ||
+    "แวะมาพูดคุยกับทีมงานและลองจับอุปกรณ์ตกปลาด้วยตัวคุณเองที่ร้านของเรา";
+  const address =
+    contact?.address?.trim() ||
+    `${COMPANY.legalNameTh}\n289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1\nต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540`;
+
+  const lat = contact?.mapLat ?? DEFAULT_LAT;
+  const lng = contact?.mapLng ?? DEFAULT_LNG;
+  const mapEmbed = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.005}%2C${lat - 0.0035}%2C${lng + 0.005}%2C${lat + 0.0035}&layer=mapnik&marker=${lat}%2C${lng}`;
+  const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
   return (
     <>
       {/* Hero */}
@@ -38,98 +44,55 @@ export default function ContactPage() {
             ติดต่อเรา
           </h1>
           <p className="mx-auto max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
-            Ryoko Tackle พร้อมมอบบริการระดับพรีเมียมและการสนับสนุนจากทีมงานมืออาชีพ
-            เพื่อตอบโจทย์ทุกความต้องการของนักตกปลา
+            {intro}
           </p>
         </Container>
       </section>
 
-      {/* Contact info */}
+      {/* Contact block */}
       <section className="py-stack-lg">
         <Container>
-          <div className="space-y-section-gap">
-              <div className="grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-4">
-                {INFO_CARDS.map((card) => (
-                  <div
-                    key={card.label}
-                    className="flex flex-col items-start gap-4 rounded-xl border border-outline-variant bg-gradient-to-br from-white to-surface-container-low p-stack-md transition-shadow duration-300 hover:shadow-lg"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container">
-                      <Icon name={card.icon} />
-                    </div>
-                    <div>
-                      <p className="mb-1 font-label-caps text-label-caps text-on-surface-variant">
-                        {card.label}
-                      </p>
-                      <p className="font-headline-sm text-headline-sm text-primary">
-                        {card.value}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-stack-lg">
-                <div className="space-y-stack-md">
-                  <h3 className="flex items-center gap-2 font-headline-sm text-headline-sm text-primary">
-                    <Icon name="location_on" className="text-secondary" />
-                    ที่ตั้งบริษัทและหน้าร้าน
-                  </h3>
-                  <p className="pl-8 font-body-md text-body-md leading-relaxed text-on-surface-variant">
-                    {COMPANY.legalNameTh}
-                    <br />
-                    289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1
-                    <br />
-                    ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540
+          <div className="grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-4">
+            {infoCards.map((card) => (
+              <div
+                key={card.id}
+                className="flex flex-col items-start gap-4 rounded-xl border border-outline-variant bg-gradient-to-br from-white to-surface-container-low p-stack-md transition-shadow duration-300 hover:shadow-lg"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container">
+                  <BrandIcon name={card.icon} fallback={card.icon} className="text-xl" />
+                </div>
+                <div>
+                  <p className="mb-1 font-label-caps text-label-caps text-on-surface-variant">
+                    {card.label}
+                  </p>
+                  <p className="font-headline-sm text-headline-sm text-primary">
+                    {card.value}
                   </p>
                 </div>
-
-                <div className="space-y-stack-md">
-                  <h3 className="font-label-caps text-label-caps uppercase text-on-surface-variant">
-                    ติดตามเรา
-                  </h3>
-                  <div className="flex gap-stack-md">
-                    {SOCIALS.map((social) => (
-                      <a
-                        key={social.label}
-                        href={social.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={social.label}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant text-on-surface-variant transition-all duration-300 hover:bg-primary hover:text-white"
-                      >
-                        <Icon name={social.icon} />
-                      </a>
-                    ))}
-                  </div>
-                </div>
               </div>
+            ))}
           </div>
         </Container>
       </section>
 
-      {/* Location + live map */}
+      {/* ที่ตั้งบริษัทและหน้าร้าน + live map */}
       <section className="py-section-gap">
         <Container>
           <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-outline-variant shadow-sm lg:grid-cols-2">
             {/* Info box */}
             <div className="flex flex-col justify-center gap-stack-md bg-gradient-to-br from-white to-surface-container-low p-stack-lg">
-              <span className="block font-label-caps text-label-caps text-secondary">
-                OUR LOCATION
-              </span>
-              <h4 className="font-headline-md text-headline-md text-primary">
-                Visit Our Company &amp; Store
-              </h4>
+              <h2 className="flex items-center gap-2 font-headline-md text-headline-md text-primary">
+                <Icon name="location_on" className="text-secondary" />
+                ที่ตั้งบริษัทและหน้าร้าน
+              </h2>
               <p className="font-body-md text-body-md text-on-surface-variant">
-                แวะมาพูดคุยกับทีมงานและลองจับอุปกรณ์ตกปลาด้วยตัวคุณเองที่ร้านของเรา
+                {locationDesc}
               </p>
-              <p className="font-body-sm text-body-sm leading-relaxed text-on-surface-variant">
-                {COMPANY.legalNameTh}
-                <br />
-                289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1 ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540
+              <p className="whitespace-pre-line font-body-sm text-body-sm leading-relaxed text-on-surface-variant">
+                {address}
               </p>
               <a
-                href={MAP_LINK}
+                href={mapLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex w-fit items-center gap-2 font-label-caps text-label-caps text-secondary transition-all duration-300 hover:gap-4"
@@ -138,10 +101,10 @@ export default function ContactPage() {
               </a>
             </div>
 
-            {/* Live Google map */}
+            {/* Live map */}
             <div className="min-h-[360px]">
               <iframe
-                src={MAP_EMBED}
+                src={mapEmbed}
                 title="แผนที่ร้าน Ryoko Tackle"
                 className="h-full min-h-[360px] w-full border-0"
                 loading="lazy"

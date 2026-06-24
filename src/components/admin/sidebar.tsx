@@ -12,6 +12,7 @@ const NAV: { href: string; label: string; icon: string; exact?: boolean }[] = [
   { href: "/admin/products/new", label: "เพิ่มสินค้าใหม่", icon: "add_circle" },
   { href: "/admin/warranty", label: "ประกันและอะไหล่", icon: "verified_user" },
   { href: "/admin/pages/about", label: "แก้ไขหน้าเกี่ยวกับเรา", icon: "description" },
+  { href: "/admin/contact", label: "แก้ไขหน้าติดต่อเรา", icon: "contact_mail" },
 ];
 
 const HOME_NAV = {

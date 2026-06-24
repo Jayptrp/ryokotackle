@@ -189,67 +189,87 @@ export function ProductGallery({
       {/* Lightbox */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 md:p-8"
           onClick={() => setLightbox(false)}
           role="dialog"
           aria-modal="true"
         >
-          <span className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-white/15 px-3 py-1 font-body-sm text-body-sm text-white">
-            {idx + 1}/{list.length}
-          </span>
-          <button
-            type="button"
-            onClick={() => setLightbox(false)}
-            aria-label="ปิด"
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-          >
-            <Icon name="close" />
-          </button>
-
+          {/* Main content container (pointer-events-none so backdrop click falls through) */}
           <div
-            className="relative flex h-full w-full max-w-5xl items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
+            className="relative flex h-full w-full max-w-5xl items-center justify-center pointer-events-none"
           >
             {current.type === "video" && youTubeEmbed(current.url) ? (
-              <iframe
-                src={youTubeEmbed(current.url)!}
-                title={alt}
-                className="aspect-video w-full max-w-4xl"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              <div
+                className="pointer-events-auto aspect-video w-full max-w-4xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <iframe
+                  src={youTubeEmbed(current.url)!}
+                  title={alt}
+                  className="h-full w-full rounded-lg"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
             ) : (
-              <Image
-                src={current.url}
-                alt={current.alt ?? alt}
-                width={1400}
-                height={1400}
-                className="max-h-[88vh] w-auto object-contain"
-                unoptimized
-              />
+              <div
+                className="pointer-events-auto relative"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Image
+                  src={current.url}
+                  alt={current.alt ?? alt}
+                  width={1400}
+                  height={1400}
+                  className="max-h-[82vh] w-auto max-w-full object-contain select-none"
+                  unoptimized
+                />
+              </div>
             )}
 
             {list.length > 1 && (
               <>
                 <button
                   type="button"
-                  onClick={() => go(idx - 1)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    go(idx - 1);
+                  }}
                   aria-label="ก่อนหน้า"
-                  className="absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+                  className="pointer-events-auto absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 border border-black/30 text-white hover:bg-white/25 transition-colors z-10"
                 >
                   <Icon name="arrow_back_ios" className="text-xl" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => go(idx + 1)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    go(idx + 1);
+                  }}
                   aria-label="ถัดไป"
-                  className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+                  className="pointer-events-auto absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 border border-black/30 text-white hover:bg-white/25 transition-colors z-10"
                 >
                   <Icon name="arrow_forward_ios" className="text-xl" />
                 </button>
               </>
             )}
           </div>
+
+          {/* Close button & counter are placed last in DOM so they naturally stack on top */}
+          <span className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-white/15 px-3 py-1 font-body-sm text-body-sm text-white z-10">
+            {idx + 1}/{list.length}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightbox(false);
+            }}
+            aria-label="ปิด"
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors z-20"
+          >
+            <Icon name="close" />
+          </button>
         </div>
       )}
     </div>
