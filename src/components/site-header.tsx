@@ -17,6 +17,7 @@ import {
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useTranslations } from "@/components/i18n/language-provider";
 import { LocalizedName  } from "@/components/i18n/localized";
+import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import type { Category } from "@/lib/types";
 
 function isActive(pathname: string, href: string) {
@@ -45,6 +46,19 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const [logoSrc, setLogoSrc] = useState("/ryoko-logo.png");
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setLogoSrc(isDark ? "/original-ryoko-logo.png" : "/ryoko-logo.png");
+
+    const observer = new MutationObserver(() => {
+      const isDarkNow = document.documentElement.classList.contains("dark");
+      setLogoSrc(isDarkNow ? "/original-ryoko-logo.png" : "/ryoko-logo.png");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
   const linkCls = (active: boolean) =>
     cn(
       "font-label-caps text-label-caps transition-colors",
@@ -63,7 +77,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
       >
         <Link href="/" className="flex min-w-0 items-center gap-3">
           <Image
-            src="/ryoko-logo.png"
+            src={logoSrc}
             alt="Ryoko Tackle"
             width={64}
             height={64}
@@ -155,13 +169,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
         </nav>
 
         <div className="flex items-center gap-stack-md">
-          <Link
-            href="/products"
-            aria-label={t("aria.search")}
-            className="rounded-full p-base text-primary transition-all hover:bg-surface-container-low"
-          >
-            <Icon name="search" />
-          </Link>
+          <DarkModeToggle />
 
           <LanguageSwitcher />
 

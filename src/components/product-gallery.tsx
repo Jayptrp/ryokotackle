@@ -93,7 +93,7 @@ export function ProductGallery({
       )}
 
       {/* Main viewer — height-capped so it never dominates large screens */}
-      <div className="group relative aspect-square max-h-[480px] w-full overflow-hidden rounded-lg border border-outline-variant bg-white">
+      <div className="group relative aspect-square max-h-[480px] w-full overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest">
         {current.type === "video" ? (
           youTubeEmbed(current.url) ? (
             <iframe
@@ -136,7 +136,7 @@ export function ProductGallery({
               type="button"
               onClick={() => go(idx - 1)}
               aria-label="ก่อนหน้า"
-              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-primary opacity-0 shadow-md transition-opacity group-hover:opacity-100"
+              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-surface/80 text-primary opacity-0 shadow-md transition-opacity group-hover:opacity-100"
             >
               <Icon name="arrow_back_ios" className="text-[18px]" />
             </button>
@@ -144,7 +144,7 @@ export function ProductGallery({
               type="button"
               onClick={() => go(idx + 1)}
               aria-label="ถัดไป"
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-primary opacity-0 shadow-md transition-opacity group-hover:opacity-100"
+              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-surface/80 text-primary opacity-0 shadow-md transition-opacity group-hover:opacity-100"
             >
               <Icon name="arrow_forward_ios" className="text-[18px]" />
             </button>
@@ -161,7 +161,7 @@ export function ProductGallery({
               type="button"
               onClick={() => setActive(i)}
               className={cn(
-                "relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-white transition-opacity",
+                "relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-surface-container-lowest transition-opacity",
                 i === idx
                   ? "border-2 border-primary opacity-100"
                   : "border-outline-variant opacity-60 hover:opacity-100",
