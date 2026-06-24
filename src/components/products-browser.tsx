@@ -205,7 +205,7 @@ export function ProductsBrowser({
             <select
               value={brand}
               onChange={(e) => pickBrand(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
+              className="w-full appearance-none rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
             >
               <option value="all">{t("filter.allBrands")}</option>
               {brands.map((b) => (
@@ -225,7 +225,7 @@ export function ProductsBrowser({
               value={subcategory}
               onChange={(e) => pickSubcategory(e.target.value)}
               disabled={availableSubcategories.length === 0}
-              className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary disabled:opacity-50"
+              className="w-full appearance-none rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary disabled:opacity-50"
             >
               <option value="">{t("filter.allSubcategories")}</option>
               {availableSubcategories.map((c) => (
@@ -250,7 +250,7 @@ export function ProductsBrowser({
               value={q}
               onChange={(e) => pickQuery(e.target.value)}
               placeholder={t("filter.searchPlaceholder")}
-              className="w-full rounded-lg border border-outline-variant bg-white py-2 pl-10 pr-4 font-body-sm outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
+              className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-10 pr-4 font-body-sm outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
             />
           </div>
         </div>

@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useTranslations } from "@/components/i18n/language-provider";
-import { LocalizedName  } from "@/components/i18n/localized";
+import { LocalizedName, ThaiOnly } from "@/components/i18n/localized";
+import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import type { Category } from "@/lib/types";
 
 function isActive(pathname: string, href: string) {
@@ -45,6 +46,19 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const [logoSrc, setLogoSrc] = useState("/ryoko-logo.png");
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setLogoSrc(isDark ? "/original-ryoko-logo.png" : "/ryoko-logo.png");
+
+    const observer = new MutationObserver(() => {
+      const isDarkNow = document.documentElement.classList.contains("dark");
+      setLogoSrc(isDarkNow ? "/original-ryoko-logo.png" : "/ryoko-logo.png");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
   const linkCls = (active: boolean) =>
     cn(
       "font-label-caps text-label-caps transition-colors",
@@ -63,12 +77,12 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
       >
         <Link href="/" className="flex min-w-0 items-center gap-3">
           <Image
-            src="/ryoko-logo.png"
+            src={logoSrc}
             alt="Ryoko Tackle"
             width={64}
             height={64}
             className={cn(
-              "flex-none transition-all duration-300",
+              "flex-none transition-all duration-300 dark:rounded-full",
               scrolled ? "h-12 w-12 md:h-16 md:w-16" : "h-24 w-24 md:h-32 md:w-32",
             )}
             priority
@@ -125,9 +139,11 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                         <LocalizedName th={c.nameTh} other={c.name} />
                       </span>
                       {c.nameTh && c.nameTh !== c.name && (
-                        <span className="text-xs opacity-75">
-                          {c.name}
-                        </span>
+                        <ThaiOnly>
+                          <span className="text-xs opacity-75">
+                            {c.name}
+                          </span>
+                        </ThaiOnly>
                       )}
                     </div>
                   </Link>
@@ -155,13 +171,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
         </nav>
 
         <div className="flex items-center gap-stack-md">
-          <Link
-            href="/products"
-            aria-label={t("aria.search")}
-            className="rounded-full p-base text-primary transition-all hover:bg-surface-container-low"
-          >
-            <Icon name="search" />
-          </Link>
+          <DarkModeToggle />
 
           <LanguageSwitcher />
 

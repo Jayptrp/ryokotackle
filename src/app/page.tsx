@@ -55,7 +55,7 @@ export default async function HomePage() {
               <T k="home.viewAll" /> <Icon name="arrow_forward" className="text-sm" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-stack-md sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-stack-md sm:grid-cols-3 lg:grid-cols-4">
             {categories.map((category) => (
               <Link
                 key={category.slug}
@@ -68,7 +68,7 @@ export default async function HomePage() {
                     src={category.backgroundImage}
                     alt=""
                     fill
-                    sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                     unoptimized
                   />
