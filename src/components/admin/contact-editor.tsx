@@ -9,6 +9,7 @@ import {
 } from "@hello-pangea/dnd";
 import { saveContact } from "@/app/admin/contact/actions";
 import { Icon } from "@/components/icon";
+import { BrandIcon } from "@/components/brand-icon";
 import type { ContactCard } from "@/lib/types";
 
 export interface ContactRow {
@@ -19,22 +20,24 @@ export interface ContactRow {
   mapLng: number | null;
 }
 
-// Curated icons for the contact cards (Material Symbols ligatures).
+// Curated icons for the contact cards (Brand logos & Material Symbols).
 const CONTACT_ICONS = [
   { value: "phone", label: "โทรศัพท์" },
   { value: "smartphone", label: "มือถือ" },
   { value: "mail", label: "อีเมล" },
-  { value: "chat", label: "แชท / LINE" },
+  { value: "line", label: "แชท / LINE" },
   { value: "location_on", label: "ที่ตั้ง" },
   { value: "schedule", label: "เวลาทำการ" },
   { value: "language", label: "เว็บไซต์" },
   { value: "print", label: "แฟกซ์" },
   { value: "store", label: "หน้าร้าน" },
   { value: "support_agent", label: "ฝ่ายบริการ" },
-  { value: "forum", label: "Facebook" },
-  { value: "photo_camera", label: "Instagram" },
-  { value: "play_circle", label: "YouTube" },
-  { value: "music_note", label: "TikTok" },
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "youtube", label: "YouTube" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "shopee", label: "Shopee" },
+  { value: "lazada", label: "Lazada" },
   { value: "info", label: "อื่น ๆ" },
 ];
 
@@ -56,10 +59,19 @@ interface CardRow {
   value: string;
 }
 
+const LEGACY_MAP: Record<string, string> = {
+  forum: "facebook",
+  photo_camera: "instagram",
+  play_circle: "youtube",
+  music_note: "tiktok",
+  chat: "line",
+};
+const mapLegacyIcon = (icon: string) => LEGACY_MAP[icon] ?? icon;
+
 let keySeq = 0;
 const nextKey = () => `c-${keySeq++}`;
 const toRows = (cards: ContactCard[]): CardRow[] =>
-  cards.map((c) => ({ key: nextKey(), id: c.id, icon: c.icon, label: c.label, value: c.value }));
+  cards.map((c) => ({ key: nextKey(), id: c.id, icon: mapLegacyIcon(c.icon), label: c.label, value: c.value }));
 
 function SectionBlock({
   title,
@@ -278,7 +290,7 @@ export function ContactEditor({
                           </div>
                           {/* Live icon preview */}
                           <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-secondary-container text-on-secondary-container">
-                            <Icon name={r.icon} className="text-lg" />
+                            <BrandIcon name={r.icon} fallback={r.icon} className="text-lg" />
                           </span>
                           <select
                             value={r.icon}

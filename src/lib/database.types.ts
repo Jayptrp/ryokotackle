@@ -462,18 +462,21 @@ export type Database = {
       warranty_page: {
         Row: {
           id: number
+          qr_code_url: string | null
           subtitle: string | null
           title: string | null
           updated_at: string
         }
         Insert: {
           id?: number
+          qr_code_url?: string | null
           subtitle?: string | null
           title?: string | null
           updated_at?: string
         }
         Update: {
           id?: number
+          qr_code_url?: string | null
           subtitle?: string | null
           title?: string | null
           updated_at?: string

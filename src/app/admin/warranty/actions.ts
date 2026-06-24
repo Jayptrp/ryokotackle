@@ -22,7 +22,7 @@ export interface WarrantyInput {
  * warranty list.
  */
 export async function saveWarranties(input: {
-  page: { title: string; subtitle: string };
+  page: { title: string; subtitle: string; qrCodeUrl: string | null };
   warranties: WarrantyInput[];
   deletedIds: string[];
 }): Promise<Warranty[]> {
@@ -51,9 +51,9 @@ export async function saveWarranties(input: {
           .insert({ name, detail, icon, color, sort_order: sortOrder });
       }
       return supabase
-        .from("warranties")
-        .update({ name, detail, icon, color, sort_order: sortOrder })
-        .eq("id", w.id);
+          .from("warranties")
+          .update({ name, detail, icon, color, sort_order: sortOrder })
+          .eq("id", w.id);
     }),
   );
   const failed = results.find((r) => r.error);
@@ -65,6 +65,7 @@ export async function saveWarranties(input: {
     .update({
       title: input.page.title.trim() || null,
       subtitle: input.page.subtitle.trim() || null,
+      qr_code_url: input.page.qrCodeUrl || null,
     })
     .eq("id", 1);
   if (pageError) throw pageError;

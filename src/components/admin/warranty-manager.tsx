@@ -15,6 +15,8 @@ import {
   WARRANTY_ICONS,
   warrantyBadgeCls,
 } from "@/lib/warranty-style";
+import { TiptapEditor } from "@/components/admin/tiptap-editor";
+import { compressImage } from "@/lib/compress-image";
 
 interface Row {
   /** Stable client key (survives reorder); not the DB id. */
@@ -96,7 +98,7 @@ function SectionBlock({
 
 interface Props {
   initial: Warranty[];
-  initialPage: { title: string; subtitle: string };
+  initialPage: { title: string; subtitle: string; qrCodeUrl: string | null };
 }
 
 export function WarrantyManager({ initial, initialPage }: Props) {
@@ -106,6 +108,10 @@ export function WarrantyManager({ initial, initialPage }: Props) {
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [title, setTitle] = useState(initialPage.title);
   const [subtitle, setSubtitle] = useState(initialPage.subtitle);
+  const [subtitleKey, setSubtitleKey] = useState(0);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(initialPage.qrCodeUrl);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Original snapshot (keyed by client key) for per-field/section dirty tracking.
   const snapshot = (rs: Row[]) => ({
@@ -120,6 +126,7 @@ export function WarrantyManager({ initial, initialPage }: Props) {
     ...snapshot(rows),
     title: initialPage.title,
     subtitle: initialPage.subtitle,
+    qrCodeUrl: initialPage.qrCodeUrl,
   });
 
   const rowDirty = (r: Row) => {
@@ -145,10 +152,11 @@ export function WarrantyManager({ initial, initialPage }: Props) {
       return d.name || d.style;
     });
 
-  // Section 2 owns: page title/subtitle, and each type's detail.
+  // Section 2 owns: page title/subtitle, qrCodeUrl, and each type's detail.
   const contentDirty =
     title !== orig.current.title ||
     subtitle !== orig.current.subtitle ||
+    qrCodeUrl !== orig.current.qrCodeUrl ||
     rows.some((r) => rowDirty(r).detail);
 
   const isDirty = typesDirty || contentDirty;
@@ -197,11 +205,40 @@ export function WarrantyManager({ initial, initialPage }: Props) {
     setDeletedIds([]);
   }
 
-  // Revert section 2 only: restore title/subtitle and each surviving row's detail,
+  async function handleQrCodeUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const upload = await compressImage(file);
+      const fd = new FormData();
+      fd.set("file", upload);
+      fd.set("productId", "warranty");
+      fd.set("folder", "qrcode");
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const { url } = await res.json();
+        setQrCodeUrl(url);
+      } else {
+        alert("อัปโหลดรูปภาพล้มเหลว");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  // Revert section 2 only: restore title/subtitle, qrCodeUrl, and each surviving row's detail,
   // leaving names/order/membership untouched.
   function revertContent() {
     setTitle(orig.current.title);
     setSubtitle(orig.current.subtitle);
+    setQrCodeUrl(orig.current.qrCodeUrl);
+    setSubtitleKey((k) => k + 1);
+    if (fileRef.current) fileRef.current.value = "";
     setRows((rs) =>
       rs.map((r) => {
         const o = orig.current.rowsByKey.get(r.key);
@@ -217,7 +254,7 @@ export function WarrantyManager({ initial, initialPage }: Props) {
     }
     startTransition(async () => {
       const fresh = await saveWarranties({
-        page: { title, subtitle },
+        page: { title, subtitle, qrCodeUrl },
         warranties: rows.map((r) => ({
           id: r.id,
           name: r.name,
@@ -230,7 +267,7 @@ export function WarrantyManager({ initial, initialPage }: Props) {
       const newRows = toRows(fresh);
       setRows(newRows);
       setDeletedIds([]);
-      orig.current = { ...snapshot(newRows), title, subtitle };
+      orig.current = { ...snapshot(newRows), title, subtitle, qrCodeUrl };
     });
   }
 
@@ -376,12 +413,65 @@ export function WarrantyManager({ initial, initialPage }: Props) {
             <label className="font-label-caps text-label-caps text-on-surface-variant">
               คำบรรยาย
             </label>
-            <textarea
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-              rows={2}
-              className={`resize-none rounded-lg border bg-white px-4 py-2.5 font-body-md text-body-md outline-none ${inputCls(subtitle !== orig.current.subtitle)}`}
-              placeholder="คำบรรยายสั้น ๆ ใต้หัวข้อ"
+            <div className={subtitle !== orig.current.subtitle ? "rounded-lg border border-error/50" : ""}>
+              <TiptapEditor
+                key={`subtitle-${subtitleKey}`}
+                name="subtitle"
+                defaultValue={orig.current.subtitle || ""}
+                placeholder="คำบรรยายสั้น ๆ ใต้หัวข้อ"
+                minHeightClass="min-h-[120px]"
+                onUpdate={setSubtitle}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 mt-2">
+            <label className="font-label-caps text-label-caps text-on-surface-variant">
+              รูปภาพ Line QR Code
+            </label>
+            <div className={`flex items-start gap-4 rounded-lg border p-4 bg-white ${qrCodeUrl !== orig.current.qrCodeUrl ? "border-error/50" : "border-outline-variant"}`}>
+              {qrCodeUrl ? (
+                <div className="flex flex-col gap-2">
+                  <img
+                    src={qrCodeUrl}
+                    alt="LINE QR Code Preview"
+                    className="h-32 w-32 rounded-lg border border-outline-variant bg-slate-50 object-contain p-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setQrCodeUrl(null)}
+                    className="flex items-center justify-center gap-1 rounded-lg border border-error/40 py-1.5 px-3 font-label-caps text-label-caps text-error hover:bg-error-container/20"
+                  >
+                    <Icon name="delete" className="text-base" />
+                    ลบรูปภาพ
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex h-32 w-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-outline-variant bg-slate-50 hover:bg-slate-100 disabled:opacity-55"
+                >
+                  <Icon name={uploading ? "hourglass_top" : "add_a_photo"} className={`text-xl ${uploading ? "animate-spin" : ""}`} />
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">
+                    {uploading ? "กำลังอัปโหลด..." : "อัปโหลดรูปภาพ"}
+                  </span>
+                </button>
+              )}
+              <div className="flex flex-1 flex-col justify-center">
+                <p className="font-body-md text-body-md text-on-surface font-medium">ภาพ LINE QR Code</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
+                  รูปภาพจะแสดงที่ฝั่งขวาของคำบรรยายในหน้าประกันและอะไหล่ (/warranty)
+                </p>
+              </div>
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleQrCodeUpload}
             />
           </div>
 

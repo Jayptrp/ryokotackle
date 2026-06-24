@@ -1,9 +1,11 @@
 "use client";
 
+import { Extension } from "@tiptap/core";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useState } from "react";
@@ -12,25 +14,44 @@ import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/compress-image";
 import { ResizableImage } from "@/components/admin/resizable-image";
 
+// Honor the exact Ctrl+L / Ctrl+E / Ctrl+R alignment shortcuts (the official
+// TextAlign defaults are Ctrl+Shift+…). Returning true from a handler prevents
+// the browser default while the editor is focused.
+const AlignShortcuts = Extension.create({
+  name: "alignShortcuts",
+  addKeyboardShortcuts() {
+    return {
+      "Mod-l": () => this.editor.commands.setTextAlign("left"),
+      "Mod-e": () => this.editor.commands.setTextAlign("center"),
+      "Mod-r": () => this.editor.commands.setTextAlign("right"),
+    };
+  },
+});
+
 // Tailwind preflight strips list/heading/table defaults and there is no
 // typography plugin, so the editor content is styled explicitly here (mirrors
 // the public RichContent look). Tables get a full grid for clear editing.
-const CONTENT_CLASS = [
-  "min-h-[300px] w-full max-w-none rounded-b-lg border-x border-b border-outline-variant",
-  "bg-white p-4 font-body-md text-body-md leading-relaxed text-on-surface outline-none focus:border-primary",
-  "[&_h2]:font-headline-sm [&_h2]:text-headline-sm [&_h2]:text-primary [&_h2]:mt-6 [&_h2]:mb-2",
-  "[&_h3]:font-medium [&_h3]:text-on-surface [&_h3]:mt-4 [&_h3]:mb-1",
-  "[&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1",
-  "[&_a]:text-secondary [&_a]:underline",
-  "[&_table]:my-4 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse",
-  "[&_th]:border [&_th]:border-outline-variant [&_th]:bg-secondary [&_th]:text-on-secondary [&_th]:p-2 [&_th]:text-left [&_th]:font-label-caps [&_th]:text-label-caps",
-  "[&_td]:border [&_td]:border-outline-variant [&_td]:p-2 [&_td]:align-top",
-].join(" ");
+function getContentClass(minHeightClass = "min-h-[300px]") {
+  return [
+    minHeightClass,
+    "w-full max-w-none rounded-b-lg border-x border-b border-outline-variant",
+    "bg-white p-4 font-body-md text-body-md leading-relaxed text-on-surface outline-none focus:border-primary",
+    "[&_h2]:font-headline-sm [&_h2]:text-headline-sm [&_h2]:text-primary [&_h2]:mt-6 [&_h2]:mb-2",
+    "[&_h3]:font-medium [&_h3]:text-on-surface [&_h3]:mt-4 [&_h3]:mb-1",
+    "[&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1",
+    "[&_a]:text-secondary [&_a]:underline",
+    "[&_table]:my-4 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse",
+    "[&_th]:border [&_th]:border-outline-variant [&_th]:bg-secondary [&_th]:text-on-secondary [&_th]:p-2 [&_th]:text-left [&_th]:font-label-caps [&_th]:text-label-caps",
+    "[&_td]:border [&_td]:border-outline-variant [&_td]:p-2 [&_td]:align-top",
+  ].join(" ");
+}
 
 interface TiptapEditorProps {
   name: string;
   defaultValue?: string | null;
   productId?: string;
+  placeholder?: string;
+  minHeightClass?: string;
   onUpdate?: (html: string) => void;
 }
 
@@ -65,22 +86,31 @@ function ToolBtn({
   );
 }
 
-export function TiptapEditor({ name, defaultValue, productId, onUpdate }: TiptapEditorProps) {
+export function TiptapEditor({
+  name,
+  defaultValue,
+  productId,
+  placeholder,
+  minHeightClass,
+  onUpdate,
+}: TiptapEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
       Underline,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      AlignShortcuts,
       Link.configure({ openOnClick: false }),
       ResizableImage.configure({ allowBase64: false }),
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
       TableCell,
-      Placeholder.configure({ placeholder: "เขียนรายละเอียดสินค้า..." }),
+      Placeholder.configure({ placeholder: placeholder ?? "เขียนรายละเอียดสินค้า..." }),
     ],
     content: defaultValue ?? "",
     editorProps: {
-      attributes: { class: CONTENT_CLASS },
+      attributes: { class: getContentClass(minHeightClass) },
       handlePaste: (view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
         const files = items
@@ -198,6 +228,18 @@ export function TiptapEditor({ name, defaultValue, productId, onUpdate }: Tiptap
         </ToolBtn>
         <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} title="Underline">
           <span className="underline">U</span>
+        </ToolBtn>
+
+        <div className="mx-1 h-5 w-px bg-outline-variant" />
+
+        <ToolBtn onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title="Align left">
+          <Icon name="format_align_left" className="text-base" />
+        </ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title="Align center">
+          <Icon name="format_align_center" className="text-base" />
+        </ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title="Align right">
+          <Icon name="format_align_right" className="text-base" />
         </ToolBtn>
 
         <div className="mx-1 h-5 w-px bg-outline-variant" />

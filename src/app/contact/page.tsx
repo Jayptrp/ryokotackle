@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
+import { BrandIcon } from "@/components/brand-icon";
 import { getContactCards, getContactPage } from "@/lib/queries";
 import { COMPANY } from "@/lib/seo";
 
@@ -58,7 +59,7 @@ export default async function ContactPage() {
                 className="flex flex-col items-start gap-4 rounded-xl border border-outline-variant bg-gradient-to-br from-white to-surface-container-low p-stack-md transition-shadow duration-300 hover:shadow-lg"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container">
-                  <Icon name={card.icon} />
+                  <BrandIcon name={card.icon} fallback={card.icon} className="text-xl" />
                 </div>
                 <div>
                   <p className="mb-1 font-label-caps text-label-caps text-on-surface-variant">

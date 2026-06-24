@@ -81,6 +81,14 @@ const BRAND_ICONS: Record<string, BrandGlyph> = {
   },
 };
 
+const LEGACY_MAP: Record<string, string> = {
+  forum: "facebook",
+  photo_camera: "instagram",
+  play_circle: "youtube",
+  music_note: "tiktok",
+  chat: "line",
+};
+
 /**
  * Renders a real brand logo for known platforms (facebook, tiktok, shopee,
  * lazada, line, youtube, instagram). Falls back to a Material Symbol for
@@ -96,7 +104,8 @@ export function BrandIcon({
   fallback?: string;
   className?: string;
 }) {
-  const glyph = BRAND_ICONS[name];
+  const normalizedName = LEGACY_MAP[name] ?? name;
+  const glyph = BRAND_ICONS[normalizedName];
   if (!glyph) {
     return fallback ? <Icon name={fallback} className={className} /> : null;
   }

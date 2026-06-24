@@ -461,16 +461,18 @@ export async function getWarranties(): Promise<Warranty[]> {
 export async function getWarrantyPage(): Promise<{
   title: string;
   subtitle: string;
+  qrCodeUrl: string | null;
 }> {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("warranty_page")
-    .select("title, subtitle")
+    .select("title, subtitle, qr_code_url")
     .eq("id", 1)
     .maybeSingle();
   return {
     title: data?.title?.trim() || "ประกันและอะไหล่",
     subtitle: data?.subtitle?.trim() || "",
+    qrCodeUrl: data?.qr_code_url || null,
   };
 }
 
