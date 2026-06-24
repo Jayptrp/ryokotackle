@@ -130,3 +130,20 @@ export interface ProductQuery {
   page?: number;
   pageSize?: number;
 }
+
+/** Editable content for the public "ติดต่อเรา" (Contact) page (single row). */
+export interface ContactPage {
+  intro: string | null;
+  locationDesc: string | null;
+  address: string | null;
+  mapLat: number | null;
+  mapLng: number | null;
+}
+
+/** An admin-managed contact info card (icon + label + value). */
+export interface ContactCard {
+  id: string;
+  icon: string;
+  label: string;
+  value: string;
+}

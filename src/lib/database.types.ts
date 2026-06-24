@@ -402,6 +402,63 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_page: {
+        Row: {
+          address: string | null
+          id: number
+          intro: string | null
+          location_desc: string | null
+          map_lat: number | null
+          map_lng: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          id?: number
+          intro?: string | null
+          location_desc?: string | null
+          map_lat?: number | null
+          map_lng?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          id?: number
+          intro?: string | null
+          location_desc?: string | null
+          map_lat?: number | null
+          map_lng?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contact_cards: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id?: string
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       warranty_page: {
         Row: {
           id: number

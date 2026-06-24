@@ -5,6 +5,8 @@ import type {
   CarouselSlide,
   Category,
   CategoryCard,
+  ContactCard,
+  ContactPage,
   FeaturedCategoryGroup,
   Product,
   ProductListItem,
@@ -470,4 +472,39 @@ export async function getWarrantyPage(): Promise<{
     title: data?.title?.trim() || "ประกันและอะไหล่",
     subtitle: data?.subtitle?.trim() || "",
   };
+}
+
+/* ------------------------------------------------------------- contact page */
+
+/** Editable content for the public contact page (singleton row). */
+export async function getContactPage(): Promise<ContactPage | null> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("contact_page")
+    .select("intro, location_desc, address, map_lat, map_lng")
+    .eq("id", 1)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    intro: data.intro,
+    locationDesc: data.location_desc,
+    address: data.address,
+    mapLat: data.map_lat,
+    mapLng: data.map_lng,
+  };
+}
+
+/** Admin-managed contact info cards in display order. */
+export async function getContactCards(): Promise<ContactCard[]> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("contact_cards")
+    .select("id, icon, label, value, sort_order")
+    .order("sort_order");
+  return (data ?? []).map((c) => ({
+    id: c.id,
+    icon: c.icon,
+    label: c.label,
+    value: c.value,
+  }));
 }
