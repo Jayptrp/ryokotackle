@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
 import { ProductCard } from "@/components/product-card";
+import { useTranslations } from "@/components/i18n/language-provider";
+import { useLocalizedName } from "@/components/i18n/localized";
 import type { Category, ProductListItem } from "@/lib/types";
 
 const PAGE_SIZE = 24;
@@ -31,6 +33,8 @@ export function ProductsBrowser({
   lockCategory?: string;
   basePath?: string;
 }) {
+  const t = useTranslations();
+  const ln = useLocalizedName();
   // Defaults render on the server (static HTML keeps the full grid for SEO).
   // Any deep-link filters in the URL are applied on the client after mount.
   const [category, setCategory] = useState(lockCategory ?? "all");
@@ -177,8 +181,8 @@ export function ProductsBrowser({
         {!lockCategory && (
           <div className="flex flex-wrap items-center gap-stack-sm overflow-x-auto pb-2 no-scrollbar md:gap-stack-md">
             {/* Uniform chips: identical font/size, only the colour changes. */}
-            {[{ slug: "all", label: "ทั้งหมด" },
-              ...topCategories.map((c) => ({ slug: c.slug, label: c.nameTh ?? c.name }))].map((c) => (
+            {[{ slug: "all", label: t("filter.all") },
+              ...topCategories.map((c) => ({ slug: c.slug, label: ln(c.nameTh, c.name) }))].map((c) => (
               <button
                 key={c.slug}
                 type="button"
@@ -201,9 +205,9 @@ export function ProductsBrowser({
             <select
               value={brand}
               onChange={(e) => pickBrand(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
+              className="w-full appearance-none rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
             >
-              <option value="all">ทุกแบรนด์</option>
+              <option value="all">{t("filter.allBrands")}</option>
               {brands.map((b) => (
                 <option key={b.slug} value={b.slug}>
                   {b.name}
@@ -221,12 +225,12 @@ export function ProductsBrowser({
               value={subcategory}
               onChange={(e) => pickSubcategory(e.target.value)}
               disabled={availableSubcategories.length === 0}
-              className="w-full appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary disabled:opacity-50"
+              className="w-full appearance-none rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-4 pr-10 font-body-sm text-on-surface outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary disabled:opacity-50"
             >
-              <option value="">ทุกหมวดหมู่ย่อย</option>
+              <option value="">{t("filter.allSubcategories")}</option>
               {availableSubcategories.map((c) => (
                 <option key={c.slug} value={c.slug}>
-                  {c.nameTh ?? c.name}
+                  {ln(c.nameTh, c.name)}
                 </option>
               ))}
             </select>
@@ -245,15 +249,15 @@ export function ProductsBrowser({
               type="text"
               value={q}
               onChange={(e) => pickQuery(e.target.value)}
-              placeholder="ค้นหาสินค้า..."
-              className="w-full rounded-lg border border-outline-variant bg-white py-2 pl-10 pr-4 font-body-sm outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
+              placeholder={t("filter.searchPlaceholder")}
+              className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-10 pr-4 font-body-sm outline-none transition-all focus:border-secondary focus:ring-1 focus:ring-secondary"
             />
           </div>
         </div>
       </div>
 
       <p className="mb-stack-md font-body-sm text-body-sm text-on-surface-variant">
-        พบ {total.toLocaleString("th-TH")} รายการ
+        {t("filter.resultsFound", { count: total.toLocaleString() })}
       </p>
 
       {pageItems.length > 0 ? (
@@ -264,7 +268,7 @@ export function ProductsBrowser({
         </section>
       ) : (
         <div className="rounded-xl border border-outline-variant bg-surface-container-low py-section-gap text-center font-body-md text-on-surface-variant">
-          ไม่พบสินค้าที่ตรงกับเงื่อนไข
+          {t("filter.empty")}
         </div>
       )}
 
@@ -274,7 +278,7 @@ export function ProductsBrowser({
             <button
               type="button"
               onClick={() => setPage(current - 1)}
-              aria-label="ก่อนหน้า"
+              aria-label={t("aria.prevPage")}
               className={cn(pagerCls, "border-outline-variant hover:border-primary")}
             >
               <Icon name="chevron_left" className="text-lg" />
@@ -306,7 +310,7 @@ export function ProductsBrowser({
             <button
               type="button"
               onClick={() => setPage(current + 1)}
-              aria-label="ถัดไป"
+              aria-label={t("aria.nextPage")}
               className={cn(pagerCls, "border-outline-variant hover:border-primary")}
             >
               <Icon name="chevron_right" className="text-lg" />

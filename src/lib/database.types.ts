@@ -309,6 +309,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          description_i18n: Json
           id: string
           is_featured: boolean
           legacy_category: string | null
@@ -318,6 +319,7 @@ export type Database = {
           slug: string
           status: Database["public"]["Enums"]["product_status"]
           summary: string | null
+          summary_i18n: Json
           updated_at: string
         }
         Insert: {
@@ -325,6 +327,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          description_i18n?: Json
           id?: string
           is_featured?: boolean
           legacy_category?: string | null
@@ -334,6 +337,7 @@ export type Database = {
           slug: string
           status?: Database["public"]["Enums"]["product_status"]
           summary?: string | null
+          summary_i18n?: Json
           updated_at?: string
         }
         Update: {
@@ -341,6 +345,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          description_i18n?: Json
           id?: string
           is_featured?: boolean
           legacy_category?: string | null
@@ -350,6 +355,7 @@ export type Database = {
           slug?: string
           status?: Database["public"]["Enums"]["product_status"]
           summary?: string | null
+          summary_i18n?: Json
           updated_at?: string
         }
         Relationships: [

@@ -359,6 +359,37 @@ interface PendingMedia {
   sortOrder: number; isPrimary: boolean; isNew?: boolean; alt?: string | null;
 }
 
+/** Locales that may carry product-copy translations (Thai is the base column). */
+const I18N_LOCALES = ["en", "vi", "id", "ms"] as const;
+
+/** True when rich-text HTML has no human-readable content (Tiptap empty doc). */
+function isBlankHtml(html: string): boolean {
+  return html.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, " ").trim().length === 0;
+}
+
+/**
+ * Parse the `*_i18n` hidden-input JSON into a clean `{ en, vi, id, ms }` map:
+ * only known locales, blank values dropped (so the public site falls back to
+ * Thai). Returns `{}` for malformed input rather than throwing.
+ */
+function parseI18n(raw: string | null): Record<string, string> {
+  if (!raw) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (!parsed || typeof parsed !== "object") return {};
+  const src = parsed as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const locale of I18N_LOCALES) {
+    const value = src[locale];
+    if (typeof value === "string" && !isBlankHtml(value)) out[locale] = value;
+  }
+  return out;
+}
+
 /**
  * Single-round-trip save for ALL product data: core fields, media, channels,
  * and description. Called from the ProductEditor client component.
@@ -371,6 +402,8 @@ export async function saveProductAll(formData: FormData) {
   const nameTh = (formData.get("name_th") as string)?.trim() || null;
   const summary = (formData.get("summary") as string)?.trim() || null;
   const description = (formData.get("description") as string) || null;
+  const summaryI18n = parseI18n(formData.get("summary_i18n") as string | null);
+  const descriptionI18n = parseI18n(formData.get("description_i18n") as string | null);
   const brandId = (formData.get("brand_id") as string) || null;
   const categoryId = await resolveCategoryId(supabase, formData);
   const status = (formData.get("status") as string) || "draft";
@@ -395,6 +428,8 @@ export async function saveProductAll(formData: FormData) {
 
   const payload = {
     name, name_th: nameTh, summary, description,
+    summary_i18n: summaryI18n,
+    description_i18n: descriptionI18n,
     category_id: categoryId || null,
     status: status as never,
     is_featured: isFeatured,

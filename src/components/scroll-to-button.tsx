@@ -8,7 +8,7 @@ export function ScrollToButton({
   label,
 }: {
   targetId: string;
-  label: string;
+  label: React.ReactNode;
 }) {
   return (
     <button

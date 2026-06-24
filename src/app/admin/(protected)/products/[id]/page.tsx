@@ -28,6 +28,7 @@ export default async function ProductEditorPage({
   let product: {
     id: string; slug: string; name: string; nameTh: string | null;
     summary: string | null; description: string | null;
+    summaryI18n: Record<string, string>; descriptionI18n: Record<string, string>;
     brandId: string | null; categoryId: string | null; status: string; isFeatured: boolean;
     media: ProductMedia[]; channels: ChannelRow[]; warrantyIds: string[];
   } | null = null;
@@ -36,7 +37,7 @@ export default async function ProductEditorPage({
     const { data } = await supabase
       .from("products")
       .select(
-        "id, slug, name, name_th, summary, description, brand_id, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty_id)",
+        "id, slug, name, name_th, summary, description, summary_i18n, description_i18n, brand_id, category_id, status, is_featured, media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty_id)",
       )
       .eq("id", id)
       .maybeSingle();
@@ -52,6 +53,8 @@ export default async function ProductEditorPage({
       nameTh: raw.name_th,
       summary: raw.summary,
       description: raw.description,
+      summaryI18n: (raw.summary_i18n as Record<string, string>) ?? {},
+      descriptionI18n: (raw.description_i18n as Record<string, string>) ?? {},
       brandId: raw.brand_id,
       categoryId: raw.category_id,
       status: raw.status,

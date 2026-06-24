@@ -5,6 +5,7 @@ import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { ProductsBrowser } from "@/components/products-browser";
 import { JsonLd } from "@/components/json-ld";
+import { T, LocalizedName, ThaiOnly } from "@/components/i18n/localized";
 import {
   getAllPublishedListItems,
   getBrands,
@@ -95,7 +96,7 @@ export default async function CategoryPage({
       <JsonLd data={breadcrumbLd} />
       <div className="mb-stack-lg flex items-center gap-base opacity-60">
         <Link href="/products" className="font-label-caps text-label-caps">
-          สินค้าทั้งหมด
+          <T k="nav.products" />
         </Link>
         {parent && (
           <>
@@ -104,12 +105,14 @@ export default async function CategoryPage({
               href={`/category/${parent.slug}`}
               className="font-label-caps text-label-caps"
             >
-              {parent.nameTh ?? parent.name}
+              <LocalizedName th={parent.nameTh} other={parent.name} />
             </Link>
           </>
         )}
         <Icon name="chevron_right" className="text-[14px]" />
-        <span className="font-label-caps text-label-caps">{category.nameTh ?? category.name}</span>
+        <span className="font-label-caps text-label-caps">
+          <LocalizedName th={category.nameTh} other={category.name} />
+        </span>
       </div>
 
       <header className="mb-stack-lg flex items-center gap-3">
@@ -120,12 +123,14 @@ export default async function CategoryPage({
         )}
         <div>
           <h1 className="font-headline-lg text-headline-lg text-primary">
-            {category.nameTh ?? category.name}
+            <LocalizedName th={category.nameTh} other={category.name} />
           </h1>
           {category.nameTh && category.nameTh !== category.name && (
-            <p className="font-body-sm text-body-sm text-on-surface-variant">
-              {category.name}
-            </p>
+            <ThaiOnly>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                {category.name}
+              </p>
+            </ThaiOnly>
           )}
         </div>
       </header>
