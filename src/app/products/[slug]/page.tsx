@@ -5,9 +5,15 @@ import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { BrandIcon } from "@/components/brand-icon";
 import { ProductGallery } from "@/components/product-gallery";
-import { RichContent } from "@/components/rich-content";
 import { ScrollToButton } from "@/components/scroll-to-button";
 import { JsonLd } from "@/components/json-ld";
+import {
+  T,
+  LocalizedName,
+  LocalizedRichContent,
+  ThaiOnly,
+} from "@/components/i18n/localized";
+import { getProductRichVariants, hasAnyVariant } from "@/lib/i18n/product-content";
 import { CHANNEL_META } from "@/lib/channels";
 import { getProductBySlug, getPublishedSlugs } from "@/lib/queries";
 import { SITE_NAME, absoluteUrl } from "@/lib/seo";
@@ -111,6 +117,11 @@ export default async function ProductDetailPage({
   // Thai-first display name; English `name` shown only as a secondary alias.
   const displayName = product.nameTh ?? product.name;
 
+  // Per-locale, pre-sanitized summary/description (Thai from DB, others from
+  // JSON overrides). The client renderer picks the active locale, Thai fallback.
+  const { summary: summaryVariants, description: descriptionVariants } =
+    getProductRichVariants(product);
+
   const productImages = product.media
     .filter((m) => m.type === "image")
     .map((m) => m.url);
@@ -158,7 +169,7 @@ export default async function ProductDetailPage({
       {/* Breadcrumb */}
       <div className="mb-stack-md flex flex-wrap items-center gap-base opacity-60">
         <Link href="/products" className="font-label-caps text-label-caps">
-          สินค้าทั้งหมด
+          <T k="nav.products" />
         </Link>
         {category && (
           <>
@@ -167,12 +178,14 @@ export default async function ProductDetailPage({
               href={`/category/${category.slug}`}
               className="font-label-caps text-label-caps"
             >
-              {category.nameTh ?? category.name}
+              <LocalizedName th={category.nameTh} other={category.name} />
             </Link>
           </>
         )}
         <Icon name="chevron_right" className="text-[14px]" />
-        <span className="font-label-caps text-label-caps">{displayName}</span>
+        <span className="font-label-caps text-label-caps">
+          <LocalizedName th={product.nameTh} other={product.name} />
+        </span>
       </div>
 
       <div className="grid grid-cols-1 gap-gutter md:grid-cols-12">
@@ -189,17 +202,19 @@ export default async function ProductDetailPage({
                   href={`/category/${category.slug}`}
                   className="font-label-caps text-label-caps text-secondary"
                 >
-                  {category.nameTh ?? category.name}
+                  <LocalizedName th={category.nameTh} other={category.name} />
                 </Link>
               )}
             </div>
             <h1 className="font-headline-lg text-headline-lg text-primary">
-              {displayName}
+              <LocalizedName th={product.nameTh} other={product.name} />
             </h1>
             {product.name && product.name !== displayName && (
-              <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">
-                {product.name}
-              </p>
+              <ThaiOnly>
+                <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">
+                  {product.name}
+                </p>
+              </ThaiOnly>
             )}
 
             {/* Warranty tags — fall back to a "contact us" chip when none assigned */}
@@ -221,13 +236,13 @@ export default async function ProductDetailPage({
                   className="inline-flex items-center gap-1 rounded-full border border-outline-variant px-3 py-1 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
                 >
                   <Icon name="help" className="text-[14px]" />
-                  สอบถามข้อมูลการรับประกัน
+                  <T k="detail.warrantyAsk" />
                 </Link>
               )}
             </div>
-            {product.summary && (
-              <RichContent
-                html={product.summary}
+            {hasAnyVariant(summaryVariants) && (
+              <LocalizedRichContent
+                variants={summaryVariants}
                 className="mt-4 [&_p]:font-body-lg [&_p]:text-body-lg [&_p]:text-on-surface-variant"
               />
             )}
@@ -236,10 +251,13 @@ export default async function ProductDetailPage({
                 note when the product has no rich description. */}
             <div className="mt-4">
               {hasRichContent(product.description) ? (
-                <ScrollToButton targetId="product-detail" label="ดูรายละเอียดสินค้า" />
+                <ScrollToButton
+                  targetId="product-detail"
+                  label={<T k="detail.viewDetails" />}
+                />
               ) : (
                 <p className="font-body-md text-body-md text-on-surface-variant">
-                  ติดต่อทางบริษัทเพื่อขอรายละเอียดเพิ่มเติม
+                  <T k="detail.contactForMore" />
                 </p>
               )}
             </div>
@@ -249,7 +267,7 @@ export default async function ProductDetailPage({
           {product.channels.length > 0 ? (
             <div className="flex flex-col gap-stack-md border-t border-outline-variant pt-stack-lg">
               <h3 className="font-label-caps text-label-caps text-on-surface-variant">
-                ช่องทางการสั่งซื้อ
+                <T k="detail.orderChannels" />
               </h3>
               <div className="flex flex-wrap gap-stack-sm">
                 {product.channels.map((ch) => {
@@ -277,14 +295,14 @@ export default async function ProductDetailPage({
           ) : (
             <div className="flex flex-col gap-stack-sm border-t border-outline-variant pt-stack-lg">
               <p className="font-body-md text-body-md text-on-surface-variant">
-                สนใจสินค้าชิ้นนี้? ติดต่อทีมงานเพื่อสอบถามราคาและช่องทางการสั่งซื้อ
+                <T k="detail.interested" />
               </p>
               <Link
                 href="/contact"
                 className="inline-flex w-fit items-center gap-2 rounded-lg bg-primary px-6 py-3 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container"
               >
                 <Icon name="mail" className="text-lg" />
-                สอบถาม / สั่งซื้อ
+                <T k="detail.inquireOrder" />
               </Link>
             </div>
           )}
@@ -300,9 +318,9 @@ export default async function ProductDetailPage({
           <div className="mx-auto max-w-4xl">
             <h2 className="mb-stack-md flex items-center gap-2 font-headline-md text-headline-md text-primary">
               <span className="h-1 w-8 rounded-full bg-secondary" />
-              รายละเอียดสินค้า
+              <T k="detail.productDetails" />
             </h2>
-            <RichContent html={product.description ?? ""} />
+            <LocalizedRichContent variants={descriptionVariants} />
           </div>
         </div>
       )}

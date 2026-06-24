@@ -5,8 +5,7 @@ import { useState, useTransition, useRef } from "react";
 import { saveProductAll } from "@/app/admin/products/actions";
 import { CategorySelect } from "@/components/admin/category-select";
 import { ProductNameField } from "@/components/admin/product-name-field";
-import { SummaryEditor } from "@/components/admin/summary-editor";
-import { TiptapEditor } from "@/components/admin/tiptap-editor";
+import { LocalizedEditor } from "@/components/admin/localized-editor";
 import { MediaManager, type PendingMedia } from "@/components/admin/media-manager";
 import { ChannelManager, type ChannelRow } from "@/components/admin/channel-manager";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
@@ -27,6 +26,8 @@ interface ProductData {
   nameTh: string | null;
   summary: string | null;
   description: string | null;
+  summaryI18n: Record<string, string>;
+  descriptionI18n: Record<string, string>;
   brandId: string | null;
   categoryId: string | null;
   status: string;
@@ -69,6 +70,21 @@ function isMediaDirty(items: PendingMedia[], original: ProductMedia[]): boolean 
 function isChannelsEqual(a: ChannelRow[], b: ChannelRow[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((r, i) => r.channel === b[i].channel && r.url === b[i].url);
+}
+
+/**
+ * Order-insensitive equality for the i18n maps. The DB returns jsonb keys in
+ * Postgres's normalized order (e.g. en, id, ms, vi) while the editor emits them
+ * in LOCALES order (en, vi, id, ms), so a `JSON.stringify` compare would falsely
+ * flag the field dirty as soon as 3+ languages diverge.
+ */
+function isI18nMapEqual(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((k) => b[k] === a[k]);
 }
 
 function isSetEqual(a: string[], b: string[]): boolean {
@@ -145,6 +161,12 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
   const [summary, setSummary] = useState(product?.summary ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
+  const [summaryI18n, setSummaryI18n] = useState<Record<string, string>>(
+    product?.summaryI18n ?? {},
+  );
+  const [descriptionI18n, setDescriptionI18n] = useState<Record<string, string>>(
+    product?.descriptionI18n ?? {},
+  );
 
   const initialChannels: ChannelRow[] =
     (product?.channels ?? []).length > 0
@@ -171,6 +193,8 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
     isFeatured: product?.isFeatured ?? false,
     summary: product?.summary ?? "",
     description: product?.description ?? "",
+    summaryI18n: product?.summaryI18n ?? {},
+    descriptionI18n: product?.descriptionI18n ?? {},
     media: product?.media ?? [] as ProductMedia[],
     channels: initialChannels,
     warrantyIds: product?.warrantyIds ?? [],
@@ -186,6 +210,8 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
     isFeatured: isFeatured !== orig.current.isFeatured,
     summary: summary !== (orig.current.summary ?? ""),
     description: description !== (orig.current.description ?? ""),
+    summaryI18n: !isI18nMapEqual(summaryI18n, orig.current.summaryI18n),
+    descriptionI18n: !isI18nMapEqual(descriptionI18n, orig.current.descriptionI18n),
     media: isMediaDirty(mediaItems, orig.current.media),
     channels: !isChannelsEqual(channels, orig.current.channels),
     warranties: !isSetEqual(warrantyIds, orig.current.warrantyIds),
@@ -194,9 +220,9 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
   const sectionDirty = {
     media: d.media,
     core: d.name || d.nameTh || d.brand || d.category || d.status || d.isFeatured,
-    summary: d.summary,
+    summary: d.summary || d.summaryI18n,
     channels: d.channels,
-    description: d.description,
+    description: d.description || d.descriptionI18n,
     warranties: d.warranties,
   };
 
@@ -218,6 +244,7 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
   }
   function revertSummary() {
     setSummary(orig.current.summary ?? "");
+    setSummaryI18n(orig.current.summaryI18n);
     setSummaryKey((k) => k + 1); // remount editor with original content
   }
   function revertChannels() {
@@ -233,6 +260,7 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
   }
   function revertDescription() {
     setDescription(orig.current.description ?? "");
+    setDescriptionI18n(orig.current.descriptionI18n);
     setDescriptionKey((k) => k + 1); // remount Tiptap with original content
   }
 
@@ -422,11 +450,16 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
             isDirty={sectionDirty.summary}
             onRevert={revertSummary}
           >
-            <SummaryEditor
+            <LocalizedEditor
               key={`summary-${summaryKey}`}
-              name="summary"
+              kind="summary"
+              thName="summary"
+              i18nName="summary_i18n"
               defaultValue={orig.current.summary || ""}
-              onUpdate={setSummary}
+              defaultI18n={orig.current.summaryI18n}
+              productName={name}
+              onThUpdate={setSummary}
+              onI18nUpdate={setSummaryI18n}
             />
           </SectionBlock>
 
@@ -493,12 +526,17 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
             isDirty={sectionDirty.description}
             onRevert={revertDescription}
           >
-            <TiptapEditor
+            <LocalizedEditor
               key={`desc-${descriptionKey}`}
-              name="description"
+              kind="full"
+              thName="description"
+              i18nName="description_i18n"
               defaultValue={orig.current.description || ""}
+              defaultI18n={orig.current.descriptionI18n}
               productId={product.id}
-              onUpdate={setDescription}
+              productName={name}
+              onThUpdate={setDescription}
+              onI18nUpdate={setDescriptionI18n}
             />
           </SectionBlock>
         )}

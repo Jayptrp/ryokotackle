@@ -5,6 +5,7 @@ import { Icon } from "@/components/icon";
 import Image from "next/image";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { ProductCard } from "@/components/product-card";
+import { T, LocalizedName } from "@/components/i18n/localized";
 import {
   getCarouselSlides,
   getCategoryCards,
@@ -45,16 +46,16 @@ export default async function HomePage() {
         <Container>
           <div className="mb-stack-lg flex items-center justify-between">
             <h2 className="font-headline-md text-headline-md text-primary">
-              หมวดหมู่สินค้า
+              <T k="home.categories" />
             </h2>
             <Link
               href="/products"
               className="flex items-center gap-1 font-label-caps text-label-caps text-secondary transition-all hover:gap-2"
             >
-              ดูทั้งหมด <Icon name="arrow_forward" className="text-sm" />
+              <T k="home.viewAll" /> <Icon name="arrow_forward" className="text-sm" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-stack-md sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-stack-md sm:grid-cols-3 lg:grid-cols-4">
             {categories.map((category) => (
               <Link
                 key={category.slug}
@@ -67,7 +68,7 @@ export default async function HomePage() {
                     src={category.backgroundImage}
                     alt=""
                     fill
-                    sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                     unoptimized
                   />
@@ -77,7 +78,7 @@ export default async function HomePage() {
                 {/* Name in a centered pill ("notch") at the bottom for readability */}
                 <div className="relative mb-stack-md flex justify-center px-2">
                   <span className="rounded-full bg-primary/70 px-3 py-1 text-center font-body-md text-body-md font-medium text-on-primary backdrop-blur-sm transition-colors group-hover:bg-secondary group-hover:text-on-secondary">
-                    {category.nameTh ?? category.name}
+                    <LocalizedName th={category.nameTh} other={category.name} />
                   </span>
                 </div>
               </Link>
@@ -94,10 +95,10 @@ export default async function HomePage() {
           <Container>
             <div className="mb-stack-lg">
               <h2 className="font-headline-md text-headline-md text-primary">
-                สินค้าแนะนำ
+                <T k="home.featured" />
               </h2>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                อุปกรณ์ที่ทีมงานคัดสรร
+                <T k="home.featuredSubtitle" />
               </p>
             </div>
 
@@ -123,13 +124,13 @@ export default async function HomePage() {
 
                   <div className="mb-stack-md flex items-center justify-between">
                     <h3 className="font-headline-sm text-headline-sm text-primary">
-                      {group.nameTh ?? group.name}
+                      <LocalizedName th={group.nameTh} other={group.name} />
                     </h3>
                     <Link
                       href={`/category/${group.slug}`}
                       className="flex items-center gap-1 font-label-caps text-label-caps text-secondary transition-all hover:gap-2"
                     >
-                      ดูทั้งหมด <Icon name="arrow_forward" className="text-sm" />
+                      <T k="home.viewAll" /> <Icon name="arrow_forward" className="text-sm" />
                     </Link>
                   </div>
 

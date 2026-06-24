@@ -299,7 +299,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, icon, color, sort_order))",
+      "id, slug, name, name_th, summary, description, summary_i18n, description_i18n, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, icon, color, sort_order))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -335,6 +335,8 @@ export async function getProductBySlug(
     nameTh: row.name_th,
     summary: row.summary,
     description: row.description,
+    summaryI18n: row.summary_i18n ?? {},
+    descriptionI18n: row.description_i18n ?? {},
     status: row.status,
     isFeatured: row.is_featured,
     category,

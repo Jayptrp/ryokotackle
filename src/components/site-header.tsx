@@ -14,6 +14,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useTranslations } from "@/components/i18n/language-provider";
+import { LocalizedName, ThaiOnly } from "@/components/i18n/localized";
+import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import type { Category } from "@/lib/types";
 
 function isActive(pathname: string, href: string) {
@@ -23,6 +27,7 @@ function isActive(pathname: string, href: string) {
 
 export function SiteHeader({ categories }: { categories: Category[] }) {
   const pathname = usePathname();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
 
   // Expanded (big logo + full company name) at the top; shrinks to the compact
@@ -39,6 +44,19 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const [logoSrc, setLogoSrc] = useState("/ryoko-logo.png");
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setLogoSrc(isDark ? "/original-ryoko-logo.png" : "/ryoko-logo.png");
+
+    const observer = new MutationObserver(() => {
+      const isDarkNow = document.documentElement.classList.contains("dark");
+      setLogoSrc(isDarkNow ? "/original-ryoko-logo.png" : "/ryoko-logo.png");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
   }, []);
 
   const linkCls = (active: boolean) =>
@@ -59,12 +77,12 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
       >
         <Link href="/" className="flex min-w-0 items-center gap-3">
           <Image
-            src="/ryoko-logo.png"
+            src={logoSrc}
             alt="Ryoko Tackle"
             width={64}
             height={64}
             className={cn(
-              "flex-none transition-all duration-300",
+              "flex-none transition-all duration-300 dark:rounded-full",
               scrolled ? "h-12 w-12 md:h-16 md:w-16" : "h-24 w-24 md:h-32 md:w-32",
             )}
             priority
@@ -89,7 +107,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
         {/* Desktop nav */}
         <nav className="hidden h-full items-center justify-center gap-stack-lg md:flex">
           <Link href="/" className={linkCls(pathname === "/")}>
-            หน้าแรก
+            {t("nav.home")}
           </Link>
 
           {/* Products with category dropdown */}
@@ -104,7 +122,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                 "flex items-center gap-1",
               )}
             >
-              สินค้าทั้งหมด
+              {t("nav.products")}
               <Icon name="expand_more" className="text-base" />
             </Link>
             <div className="invisible absolute left-1/2 top-full z-50 w-[560px] -translate-x-1/2 rounded-xl border border-outline-variant bg-surface-container-lowest p-stack-md opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
@@ -118,12 +136,14 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                     <Icon name={c.icon ?? "category"} className="text-xl" />
                     <div className="flex flex-col gap-0.5">
                       <span className="font-body-sm text-body-sm font-medium">
-                        {c.nameTh ?? c.name}
+                        <LocalizedName th={c.nameTh} other={c.name} />
                       </span>
                       {c.nameTh && c.nameTh !== c.name && (
-                        <span className="text-xs opacity-75">
-                          {c.name}
-                        </span>
+                        <ThaiOnly>
+                          <span className="text-xs opacity-75">
+                            {c.name}
+                          </span>
+                        </ThaiOnly>
                       )}
                     </div>
                   </Link>
@@ -136,35 +156,31 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
             href="/warranty"
             className={linkCls(isActive(pathname, "/warranty"))}
           >
-            ประกันและอะไหล่
+            {t("nav.warranty")}
           </Link>
 
           <Link
             href="/contact"
             className={linkCls(isActive(pathname, "/contact"))}
           >
-            ติดต่อเรา
+            {t("nav.contact")}
           </Link>
           <Link href="/about" className={linkCls(isActive(pathname, "/about"))}>
-            เกี่ยวกับเรา
+            {t("nav.about")}
           </Link>
         </nav>
 
         <div className="flex items-center gap-stack-md">
-          <Link
-            href="/products"
-            aria-label="ค้นหา"
-            className="rounded-full p-base text-primary transition-all hover:bg-surface-container-low"
-          >
-            <Icon name="search" />
-          </Link>
+          <DarkModeToggle />
+
+          <LanguageSwitcher />
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               render={
                 <button
                   type="button"
-                  aria-label="เมนู"
+                  aria-label={t("aria.menu")}
                   className="p-base text-primary md:hidden"
                 />
               }
@@ -183,18 +199,18 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 >
-                  หน้าแรก
+                  {t("nav.home")}
                 </Link>
                 <Link
                   href="/products"
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 >
-                  สินค้าทั้งหมด
+                  {t("nav.products")}
                 </Link>
 
                 <span className="mt-2 px-4 font-label-caps text-label-caps text-on-surface-variant/70">
-                  หมวดหมู่
+                  {t("nav.categories")}
                 </span>
                 {categories.map((c) => (
                   <Link
@@ -204,7 +220,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                     className="flex items-center gap-2 rounded-lg px-4 py-2.5 font-body-sm text-body-sm text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                   >
                     <Icon name={c.icon ?? "category"} className="text-lg" />
-                    {c.nameTh ?? c.name}
+                    <LocalizedName th={c.nameTh} other={c.name} />
                   </Link>
                 ))}
 
@@ -213,21 +229,21 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                   onClick={() => setOpen(false)}
                   className="mt-2 rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 >
-                  ประกันและอะไหล่
+                  {t("nav.warranty")}
                 </Link>
                 <Link
                   href="/contact"
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 >
-                  ติดต่อเรา
+                  {t("nav.contact")}
                 </Link>
                 <Link
                   href="/about"
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 >
-                  เกี่ยวกับเรา
+                  {t("nav.about")}
                 </Link>
               </nav>
             </SheetContent>
