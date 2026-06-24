@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useTranslations } from "@/components/i18n/language-provider";
-import { LocalizedName  } from "@/components/i18n/localized";
+import { LocalizedName, ThaiOnly } from "@/components/i18n/localized";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import type { Category } from "@/lib/types";
 
@@ -82,7 +82,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
             width={64}
             height={64}
             className={cn(
-              "flex-none transition-all duration-300",
+              "flex-none transition-all duration-300 dark:rounded-full",
               scrolled ? "h-12 w-12 md:h-16 md:w-16" : "h-24 w-24 md:h-32 md:w-32",
             )}
             priority
@@ -139,9 +139,11 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                         <LocalizedName th={c.nameTh} other={c.name} />
                       </span>
                       {c.nameTh && c.nameTh !== c.name && (
-                        <span className="text-xs opacity-75">
-                          {c.name}
-                        </span>
+                        <ThaiOnly>
+                          <span className="text-xs opacity-75">
+                            {c.name}
+                          </span>
+                        </ThaiOnly>
                       )}
                     </div>
                   </Link>
