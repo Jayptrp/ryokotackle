@@ -89,11 +89,11 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
             unoptimized
           />
           {scrolled ? (
-            <span className="font-headline-md text-headline-md font-bold tracking-tight text-primary">
+            <span className="hidden md:inline font-headline-md text-headline-md font-bold tracking-tight text-primary">
               Ryoko
             </span>
           ) : (
-            <span className="flex min-w-0 flex-col leading-tight">
+            <span className="hidden md:flex min-w-0 flex-col leading-tight">
               <span className="font-headline-sm text-sm font-bold text-primary md:text-base lg:text-headline-sm">
                 บริษัท ที.อาร์.วาย.ฟิชชิ่ง แทคเคิล จำกัด
               </span>
@@ -181,7 +181,7 @@ export function SiteHeader({ categories }: { categories: Category[] }) {
                 <button
                   type="button"
                   aria-label={t("aria.menu")}
-                  className="p-base text-primary md:hidden"
+                  className="p-base text-primary md:hidden flex items-center justify-center"
                 />
               }
             >
