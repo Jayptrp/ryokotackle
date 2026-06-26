@@ -34,3 +34,6 @@ jobs:
           # Supabase keys are needed at build time (Next.js embeds NEXT_PUBLIC_ vars)
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          # Canonical/OG/sitemap origin — baked into the bundle at build time.
+          # Falls back to the hardcoded default in src/lib/seo.ts if the secret is unset.
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}

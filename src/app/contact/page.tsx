@@ -7,6 +7,11 @@ import { COMPANY } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "ติดต่อเรา — Ryoko Tackle",
+  description:
+    "ติดต่อ Ryoko Tackle (บริษัท ที.อาร์.วาย.ฟิชชิ่ง แทคเคิล จำกัด) " +
+    "289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1 ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540 " +
+    `โทร ${COMPANY.phone}`,
+  alternates: { canonical: "/contact" },
 };
 
 // Default store coordinates (used when the admin hasn't set a pin).

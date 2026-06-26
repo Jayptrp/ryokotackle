@@ -4,11 +4,22 @@ import { Container } from "@/components/container";
 import { RichContent } from "@/components/rich-content";
 import { getPageBySlug } from "@/lib/queries";
 
+/** Strip HTML tags + clamp to a meta-description-friendly length. */
+function toMetaDescription(html: string, max = 120): string {
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
 // Statically rendered; admins trigger an on-demand revalidate when they save.
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getPageBySlug("about");
+  const description = page?.content
+    ? toMetaDescription(page.content)
+    : "เกี่ยวกับ Ryoko Tackle ร้านอุปกรณ์ตกปลาพรีเมียม คันเบ็ด รอก เหยื่อปลอม และอุปกรณ์ตกปลาครบวงจร";
   return {
     title: page ? `${page.titleTh ?? page.title} — Ryoko Tackle` : "Ryoko Tackle",
+    description,
+    alternates: { canonical: "/about" },
   };
 }
 
