@@ -13,12 +13,27 @@ export const SITE_URL = (
 
 export const SITE_NAME = "Ryoko Tackle";
 
-/** Brand-forward, length-controlled default title (legacy title was 646px — too long). */
-export const SITE_TITLE = "Ryoko Tackle | อุปกรณ์ตกปลาพรีเมียม คันเบ็ด รอก เหยื่อปลอม";
+/**
+ * Brand-forward default title, trimmed to fit Google's ~580px SERP budget
+ * (Thai glyphs are wide). Dropped keywords ("พรีเมียม") live in the homepage
+ * H1/body instead, where they stay visible and indexable.
+ *
+ * Previous version (~752px, truncated in SERPs — kept for reference):
+ *   "Ryoko Tackle | อุปกรณ์ตกปลาพรีเมียม คันเบ็ด รอก เหยื่อปลอม"
+ */
+export const SITE_TITLE = "Ryoko Tackle | อุปกรณ์ตกปลา คันเบ็ด รอก เหยื่อ";
 
-/** ~150-char Thai description packed with the legacy's proven search terms. */
+/**
+ * Concise Thai description (~110 chars) sized to Google's snippet budget. The
+ * brand roster was moved out (it overflowed the budget and the keywords meta is
+ * ignored by Google anyway) — brands live in SITE_KEYWORDS, the homepage copy,
+ * and structured data.
+ *
+ * Previous version (~1482px, truncated — kept for reference):
+ *   "ร้านอุปกรณ์ตกปลา Ryoko Tackle จำหน่ายคันเบ็ดตกปลา รอกตกปลา เหยื่อปลอม เหยื่อจิ๊ก สายเอ็น PE และอุปกรณ์ตกปลาคุณภาพสูง แบรนด์ RYOKO, Ballista, Sakura, Kaido, G-Luck, Akari"
+ */
 export const SITE_DESCRIPTION =
-  "ร้านอุปกรณ์ตกปลา Ryoko Tackle จำหน่ายคันเบ็ดตกปลา รอกตกปลา เหยื่อปลอม เหยื่อจิ๊ก สายเอ็น PE และอุปกรณ์ตกปลาคุณภาพสูง แบรนด์ RYOKO, Ballista, Sakura, Kaido, G-Luck, Akari";
+  "ร้านอุปกรณ์ตกปลา Ryoko Tackle จำหน่ายคันเบ็ด รอก เหยื่อปลอม สายเอ็น PE และอุปกรณ์ตกปลาคุณภาพสูงครบวงจร";
 
 /** High-value Thai + brand keywords carried over from the legacy meta keywords. */
 export const SITE_KEYWORDS = [
