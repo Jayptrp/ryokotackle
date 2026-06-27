@@ -131,8 +131,12 @@ longer used by public pages — see the Rendering section.) Domain types in
 Centralised in `src/lib/seo.ts` (site URL, default title/description, Thai keyword list,
 company NAP/socials migrated from the legacy site). Conventions:
 - **One `<h1>` per page** (the home hero uses an `sr-only` keyword H1; carousel titles are H2).
-- Per-page `generateMetadata` with canonical + Open Graph; product pages emit **JSON-LD**
-  (`src/components/json-ld.tsx`): Product, Brand, BreadcrumbList; layout emits Store + WebSite.
+- Per-page `generateMetadata` with canonical + Open Graph; product/category pages emit
+  **JSON-LD** (`src/components/json-ld.tsx`): BreadcrumbList; layout emits Store + WebSite.
+  No `Product` schema — Google requires `offers`, `review`, or `aggregateRating` for Product
+  rich-result eligibility, none of which this catalog has (no price/cart/reviews), so emitting
+  it just gets every product page flagged "invalid item" in GSC. Don't re-add `@type: Product`
+  unless one of those three becomes real (e.g. a future review system).
 - Dynamic `src/app/sitemap.ts` (static routes + categories + published products) and
   `src/app/robots.ts` (blocks `/admin`, `/api`).
 - **Title/description pixel limits:** title < 580px, meta description < 1000px. **Thai
