@@ -122,26 +122,7 @@ export default async function ProductDetailPage({
   const { summary: summaryVariants, description: descriptionVariants } =
     getProductRichVariants(product);
 
-  const productImages = product.media
-    .filter((m) => m.type === "image")
-    .map((m) => m.url);
   const canonical = absoluteUrl(`/products/${product.slug}`);
-
-  // Product structured data — helps rich results in search.
-  const productLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: displayName,
-    ...(product.name && product.name !== displayName
-      ? { alternateName: product.name }
-      : {}),
-    ...(productImages.length ? { image: productImages } : {}),
-    ...(product.summary ? { description: toMetaDescription(product.summary) } : {}),
-    ...(category
-      ? { category: category.nameTh ?? category.name }
-      : {}),
-    url: canonical,
-  };
 
   // Breadcrumb trail (catalog → category → product).
   const breadcrumbItems = [
@@ -164,7 +145,6 @@ export default async function ProductDetailPage({
 
   return (
     <Container className="pb-section-gap pt-stack-md">
-      <JsonLd data={productLd} />
       <JsonLd data={breadcrumbLd} />
       {/* Breadcrumb */}
       <div className="mb-stack-md flex flex-wrap items-center gap-base opacity-60">
