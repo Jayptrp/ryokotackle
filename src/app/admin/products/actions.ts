@@ -3,15 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-function slugify(str: string) {
-  const s = str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 100);
-  return s || "product";
-}
+import { slugify } from "@/lib/slug";
 
 /**
  * Revalidate the `/category/{slug}` pages affected when a product's category
@@ -136,7 +128,7 @@ async function resolveCategoryId(
 }
 
 async function ensureUniqueSlug(supabase: Awaited<ReturnType<typeof createAdminClient>>, base: string, excludeId?: string) {
-  const slug = slugify(base);
+  const slug = slugify(base) || "product";
   let attempt = 0;
   while (true) {
     const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
