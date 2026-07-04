@@ -135,6 +135,51 @@ export interface ProductQuery {
   pageSize?: number;
 }
 
+/* ----------------------------------------------------------- category CRUD */
+
+/** A category row as managed by the admin CRUD page (with a direct product count). */
+export interface CategoryAdminNode {
+  id: string;
+  slug: string;
+  name: string;
+  nameTh: string | null;
+  parentId: string | null;
+  icon: string | null;
+  sortOrder: number;
+  /** Products assigned directly to this category (any status). */
+  productCount: number;
+}
+
+/**
+ * One category in the CRUD save payload. New rows carry `id: null` and are keyed
+ * by a stable client `key`; children reference their parent by `parentKey` so a
+ * newly-created parent + child can be persisted in the same save.
+ */
+export interface CategorySaveNode {
+  key: string;
+  id: string | null;
+  parentKey: string | null;
+  name: string;
+  nameTh: string | null;
+  slug: string;
+  icon: string | null;
+}
+
+/** A staged category deletion — its products reassign to `reassignTo` (null = uncategorized). */
+export interface CategoryDeletion {
+  id: string;
+  reassignTo: string | null;
+}
+
+/** A product row for the admin category page's read-only reference table. */
+export interface CategoryProductRow {
+  id: string;
+  name: string;
+  nameTh: string | null;
+  status: ProductStatus;
+  categoryId: string | null;
+}
+
 /** Editable content for the public "ติดต่อเรา" (Contact) page (single row). */
 export interface ContactPage {
   intro: string | null;

@@ -265,11 +265,6 @@ function CategoryCardEditor({
     setQ("");
   }
 
-  function handleClear() {
-    onPatch({ imageUrl: null, imageProductId: null });
-    setPicking(false);
-  }
-
   const controlsDisabled = disabled || markedDeleted;
 
   return (
@@ -326,13 +321,11 @@ function CategoryCardEditor({
             <span className="font-body-md text-body-md font-medium text-on-surface">
               {row.label}
             </span>
-            <span className="rounded-full bg-surface-container px-2 py-0.5 font-label-caps text-label-caps text-on-surface-variant">
-              {mode === "uploaded"
-                ? "รูปอัปโหลด"
-                : mode === "product"
-                  ? "รูปจากสินค้า"
-                  : "อัตโนมัติ"}
-            </span>
+            {mode !== "auto" && (
+              <span className="rounded-full bg-surface-container px-2 py-0.5 font-label-caps text-label-caps text-on-surface-variant">
+                {mode === "uploaded" ? "รูปอัปโหลด" : "รูปจากสินค้า"}
+              </span>
+            )}
 
             {/* Per-card revert (in-place edits) */}
             {dirty && !markedDeleted && (
@@ -406,17 +399,6 @@ function CategoryCardEditor({
               )}
             </button>
 
-            {mode !== "auto" && (
-              <button
-                type="button"
-                onClick={handleClear}
-                disabled={controlsDisabled}
-                className="flex items-center gap-1 rounded-lg px-2 py-1.5 font-label-caps text-label-caps text-on-surface-variant transition-colors hover:text-error"
-              >
-                <Icon name="restart_alt" className="text-base" />
-                ใช้อัตโนมัติ
-              </button>
-            )}
           </div>
         </div>
       </div>
