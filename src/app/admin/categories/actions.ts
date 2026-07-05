@@ -81,12 +81,29 @@ export async function saveCategories(input: {
     seenSlug.add(c.slug);
   }
 
+  // Snapshot current slugs/names so we can rebuild the SSG product detail pages
+  // of any category whose slug or name changes — each product page bakes in its
+  // category's slug (breadcrumb link) + name, which would otherwise point at the
+  // old, now-404 `/category/<old-slug>` URL until that product is revalidated.
+  const { data: before } = await supabase
+    .from("categories")
+    .select("id, slug, name, name_th");
+  const beforeById = new Map((before ?? []).map((c) => [c.id, c]));
+  const productSlugsToRevalidate = new Set<string>();
+
   // ── deletions ───────────────────────────────────────────────────────────
   if (input.deletions.length) {
     const delIds = input.deletions.map((d) => d.id);
 
     // Reassign products off each doomed category first (never orphan them).
     for (const d of input.deletions) {
+      // Products leaving this category get a new (or no) category → rebuild them.
+      const { data: moving } = await supabase
+        .from("products")
+        .select("slug")
+        .eq("category_id", d.id);
+      for (const p of moving ?? []) productSlugsToRevalidate.add(p.slug);
+
       const { error } = await supabase
         .from("products")
         .update({ category_id: d.reassignTo })
@@ -176,10 +193,33 @@ export async function saveCategories(input: {
     if (error) throw error;
   }
 
+  // Products whose (direct) category changed slug or name need their baked-in
+  // breadcrumb/link/title rebuilt too.
+  const changedCatIds = cats
+    .filter((c) => c.id)
+    .filter((c) => {
+      const b = beforeById.get(c.id!);
+      if (!b) return false;
+      return (
+        b.slug !== c.slug ||
+        b.name !== resolvedName(c) ||
+        (b.name_th ?? "") !== (c.nameTh?.trim() || "")
+      );
+    })
+    .map((c) => c.id!);
+  if (changedCatIds.length) {
+    const { data: affected } = await supabase
+      .from("products")
+      .select("slug")
+      .in("category_id", changedCatIds);
+    for (const p of affected ?? []) productSlugsToRevalidate.add(p.slug);
+  }
+
   revalidatePath("/");
   revalidatePath("/products");
   revalidatePath("/category", "layout");
   revalidatePath("/admin/categories");
+  for (const slug of productSlugsToRevalidate) revalidatePath(`/products/${slug}`);
 
   return fetchNodes(supabase);
 }
