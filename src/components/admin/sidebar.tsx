@@ -29,17 +29,19 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "หน้าเว็บไซต์",
     items: [
-      { href: "/admin/warranty", label: "ประกันและอะไหล่", icon: "verified_user" },
-      { href: "/admin/pages/about", label: "แก้ไขหน้าเกี่ยวกับเรา", icon: "description" },
-      { href: "/admin/contact", label: "แก้ไขหน้าติดต่อเรา", icon: "contact_mail" },
-    ],
-  },
-  {
-    label: "แก้ไขหน้าแรก",
-    items: [
-      { href: "/admin/home/carousel", label: "แก้ไข carousel", icon: "view_carousel" },
-      { href: "/admin/home/categories", label: "แก้ไขรูปหมวดหมู่", icon: "grid_view" },
-      { href: "/admin/home/featured", label: "แก้ไขสินค้าแนะนำ", icon: "star" },
+      {
+        href: "/admin/home",
+        label: "หน้าแรก",
+        icon: "home",
+        children: [
+          { href: "/admin/home/carousel", label: "แก้ไข carousel", icon: "view_carousel" },
+          { href: "/admin/home/categories", label: "แก้ไขรูปหมวดหมู่", icon: "grid_view" },
+          { href: "/admin/home/featured", label: "แก้ไขสินค้าแนะนำ", icon: "star" },
+        ],
+      },
+      { href: "/admin/warranty", label: "หน้าประกันและอะไหล่", icon: "verified_user" },
+      { href: "/admin/contact", label: "หน้าติดต่อเรา", icon: "contact_mail" },
+      { href: "/admin/pages/about", label: "หน้าเกี่ยวกับเรา", icon: "description" },
     ],
   },
   {
