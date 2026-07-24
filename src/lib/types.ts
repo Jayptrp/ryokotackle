@@ -13,6 +13,10 @@ export interface Category {
   parentSlug: string | null;
   icon: string | null;
   sortOrder: number;
+  /** Optional SEO override for the category page; blank = auto-derived. */
+  metaTitle?: string | null;
+  /** Optional SEO override for the category page; blank = auto-derived. */
+  metaDescription?: string | null;
   /** Admin-uploaded background image for the homepage category card. */
   imageUrl: string | null;
   /** Product whose primary image backs the card when no image is uploaded. */
@@ -119,6 +123,10 @@ export interface Product {
   descriptionI18n: Record<string, string>;
   status: ProductStatus;
   isFeatured: boolean;
+  /** Optional SEO override; blank = auto-derive title from name/category. */
+  metaTitle: string | null;
+  /** Optional SEO override; blank = auto-derive description from summary/detail. */
+  metaDescription: string | null;
   category: Category | null;
   media: ProductMedia[];
   channels: ProductChannel[];
@@ -195,4 +203,68 @@ export interface ContactCard {
   icon: string;
   label: string;
   value: string;
+}
+
+/* --------------------------------------------------------- site SEO settings */
+
+/** A social profile link (platform drives the footer brand icon; url feeds JSON-LD sameAs). */
+export interface SocialLink {
+  platform: string;
+  url: string;
+}
+
+/** A footer quick link. */
+export interface FooterLink {
+  label: string;
+  href: string;
+}
+
+/**
+ * Site-wide SEO / business settings, loaded from the `site_settings` DB row
+ * (falls back to the constants in `src/lib/seo.ts` when a field is unset). This
+ * is the admin-editable, deploy-independent source of truth — see
+ * `docs/seo-panel.md`.
+ */
+export interface SiteSettings {
+  siteName: string;
+  siteTitle: string;
+  siteDescription: string;
+  siteKeywords: string[];
+  ogImageUrl: string;
+  company: {
+    legalName: string;
+    legalNameTh: string;
+    slogan: string;
+    email: string;
+    phone: string;
+    mobile: string;
+    fax: string;
+    address: {
+      street: string;
+      locality: string;
+      region: string;
+      postalCode: string;
+      country: string;
+    };
+    line: string;
+  };
+  socials: SocialLink[];
+  footerLinks: FooterLink[];
+  /** GA4 Measurement ID (G-XXXXXXXXXX) — null/empty = not configured. */
+  ga4Id: string | null;
+  /** Google Tag Manager container ID (GTM-XXXXXXX). */
+  gtmId: string | null;
+  /** google-site-verification content value for Search Console. */
+  gscVerification: string | null;
+  /** Advanced: raw markup injected into <head> (admin-authored). */
+  customHeadHtml: string | null;
+  /** Advanced: raw markup injected at the end of <body>. */
+  customBodyHtml: string | null;
+  /** AI answer-engine crawler allowances (robots.txt). */
+  aiCrawlers: {
+    gptbot: boolean;
+    claudebot: boolean;
+    perplexitybot: boolean;
+    googleExtended: boolean;
+  };
 }

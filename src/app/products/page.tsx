@@ -1,14 +1,24 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { ProductsBrowser } from "@/components/products-browser";
-import { getAllPublishedListItems, getBrands, getCategories } from "@/lib/queries";
+import {
+  getAllPublishedListItems,
+  getBrands,
+  getCategories,
+  getPageSeo,
+} from "@/lib/queries";
 import { SITE_NAME } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "สินค้าทั้งหมด",
-  description: `เลือกซื้ออุปกรณ์ตกปลาครบวงจรจาก ${SITE_NAME} — คันเบ็ด รอก เหยื่อปลอม เหยื่อจิ๊ก สายเอ็น PE กล่องอุปกรณ์ และอะไหล่ ครบทุกแบรนด์ในที่เดียว`,
-  alternates: { canonical: "/products" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await getPageSeo("/products");
+  return {
+    title: seo.metaTitle?.trim() || "สินค้าทั้งหมด",
+    description:
+      seo.metaDescription?.trim() ||
+      `เลือกซื้ออุปกรณ์ตกปลาครบวงจรจาก ${SITE_NAME} — คันเบ็ด รอก เหยื่อปลอม เหยื่อจิ๊ก สายเอ็น PE กล่องอุปกรณ์ และอะไหล่ ครบทุกแบรนด์ในที่เดียว`,
+    alternates: { canonical: "/products" },
+  };
+}
 
 // Static: the catalog is loaded once and filtered in the browser, so there is
 // no per-request server work. Revalidated on demand when admins edit products.

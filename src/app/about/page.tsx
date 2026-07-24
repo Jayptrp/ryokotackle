@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { RichContent } from "@/components/rich-content";
-import { getPageBySlug } from "@/lib/queries";
+import { getPageBySlug, getPageSeo } from "@/lib/queries";
 
 /** Strip HTML tags + clamp to a meta-description-friendly length. */
 function toMetaDescription(html: string, max = 120): string {
@@ -12,12 +12,16 @@ function toMetaDescription(html: string, max = 120): string {
 
 // Statically rendered; admins trigger an on-demand revalidate when they save.
 export async function generateMetadata(): Promise<Metadata> {
-  const page = await getPageBySlug("about");
-  const description = page?.content
-    ? toMetaDescription(page.content)
-    : "เกี่ยวกับ Ryoko Tackle ร้านอุปกรณ์ตกปลาพรีเมียม คันเบ็ด รอก เหยื่อปลอม และอุปกรณ์ตกปลาครบวงจร";
+  const [page, seo] = await Promise.all([getPageBySlug("about"), getPageSeo("/about")]);
+  const description =
+    seo.metaDescription?.trim() ||
+    (page?.content
+      ? toMetaDescription(page.content)
+      : "เกี่ยวกับ Ryoko Tackle ร้านอุปกรณ์ตกปลาพรีเมียม คันเบ็ด รอก เหยื่อปลอม และอุปกรณ์ตกปลาครบวงจร");
   return {
-    title: page ? `${page.titleTh ?? page.title} — Ryoko Tackle` : "Ryoko Tackle",
+    title:
+      seo.metaTitle?.trim() ||
+      (page ? `${page.titleTh ?? page.title} — Ryoko Tackle` : "Ryoko Tackle"),
     description,
     alternates: { canonical: "/about" },
   };

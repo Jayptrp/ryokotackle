@@ -396,6 +396,8 @@ export async function saveProductAll(formData: FormData) {
   const description = (formData.get("description") as string) || null;
   const summaryI18n = parseI18n(formData.get("summary_i18n") as string | null);
   const descriptionI18n = parseI18n(formData.get("description_i18n") as string | null);
+  const metaTitle = (formData.get("meta_title") as string)?.trim() || null;
+  const metaDescription = (formData.get("meta_description") as string)?.trim() || null;
   const brandId = (formData.get("brand_id") as string) || null;
   const categoryId = await resolveCategoryId(supabase, formData);
   const status = (formData.get("status") as string) || "draft";
@@ -422,6 +424,8 @@ export async function saveProductAll(formData: FormData) {
     name, name_th: nameTh, summary, description,
     summary_i18n: summaryI18n,
     description_i18n: descriptionI18n,
+    meta_title: metaTitle,
+    meta_description: metaDescription,
     category_id: categoryId || null,
     status: status as never,
     is_featured: isFeatured,
@@ -503,6 +507,8 @@ export async function saveProductAll(formData: FormData) {
   revalidatePath(`/products/${slug}`);
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/llms.txt");
+  revalidatePath("/sitemap.xml");
   await revalidateCategoryPaths(supabase, [oldCategoryId, categoryId]);
 
   redirect(isNew ? `/admin/products/${productId}` : `/admin/products/${id}`);

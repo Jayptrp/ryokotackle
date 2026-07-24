@@ -4,17 +4,11 @@ import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { JsonLd } from "@/components/json-ld";
+import { AnalyticsHead, GtmNoScript } from "@/components/analytics";
+import { CustomCode } from "@/components/custom-code";
 import { LanguageProvider } from "@/components/i18n/language-provider";
-import { getCategoryTree } from "@/lib/queries";
-import {
-  SITE_URL,
-  SITE_NAME,
-  SITE_TITLE,
-  SITE_DESCRIPTION,
-  SITE_KEYWORDS,
-  COMPANY,
-  absoluteUrl,
-} from "@/lib/seo";
+import { getCategoryTree, getSiteSettings, getPageSeo } from "@/lib/queries";
+import { SITE_URL, absoluteUrl } from "@/lib/seo";
 
 const ibmPlexSansThai = IBM_Plex_Sans_Thai({
   variable: "--font-ibm-plex-thai",
@@ -23,37 +17,50 @@ const ibmPlexSansThai = IBM_Plex_Sans_Thai({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: SITE_TITLE,
-    template: `%s | ${SITE_NAME}`,
-  },
-  description: SITE_DESCRIPTION,
-  keywords: SITE_KEYWORDS,
-  applicationName: SITE_NAME,
-  alternates: { canonical: "/" },
-  openGraph: {
-    type: "website",
-    siteName: SITE_NAME,
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    url: SITE_URL,
-    locale: "th_TH",
-    images: [{ url: "/og-default.png", width: 1200, height: 630, alt: SITE_NAME }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    images: ["/og-default.png"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large" },
-  },
-};
+/**
+ * Site-wide metadata, sourced from the admin-editable `site_settings` row (with
+ * the `/` route's optional per-page override applied on top). `title.default`
+ * covers the homepage and any page without its own generateMetadata; the
+ * `%s | {siteName}` template wraps titles that individual pages do set.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const [s, home] = await Promise.all([getSiteSettings(), getPageSeo("/")]);
+  const title = home.metaTitle || s.siteTitle;
+  const description = home.metaDescription || s.siteDescription;
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: title,
+      template: `%s | ${s.siteName}`,
+    },
+    description,
+    keywords: s.siteKeywords,
+    applicationName: s.siteName,
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      siteName: s.siteName,
+      title,
+      description,
+      url: SITE_URL,
+      locale: "th_TH",
+      images: [{ url: s.ogImageUrl, width: 1200, height: 630, alt: s.siteName }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [s.ogImageUrl],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large" },
+    },
+    ...(s.gscVerification ? { verification: { google: s.gscVerification } } : {}),
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#001e40",
@@ -66,34 +73,38 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const categories = await getCategoryTree();
+  const [categories, settings] = await Promise.all([
+    getCategoryTree(),
+    getSiteSettings(),
+  ]);
+  const { company } = settings;
 
   // Site-wide structured data: who the company is + sitewide search.
   const organizationLd = {
     "@context": "https://schema.org",
     "@type": "Store",
-    name: SITE_NAME,
-    legalName: COMPANY.legalName,
-    slogan: COMPANY.slogan,
+    name: settings.siteName,
+    legalName: company.legalName,
+    slogan: company.slogan,
     url: SITE_URL,
-    image: absoluteUrl("/og-default.png"),
-    email: COMPANY.email,
-    telephone: COMPANY.phone,
+    image: absoluteUrl(settings.ogImageUrl),
+    email: company.email,
+    telephone: company.phone,
     address: {
       "@type": "PostalAddress",
-      streetAddress: COMPANY.address.street,
-      addressLocality: COMPANY.address.locality,
-      addressRegion: COMPANY.address.region,
-      postalCode: COMPANY.address.postalCode,
-      addressCountry: COMPANY.address.country,
+      streetAddress: company.address.street,
+      addressLocality: company.address.locality,
+      addressRegion: company.address.region,
+      postalCode: company.address.postalCode,
+      addressCountry: company.address.country,
     },
-    sameAs: COMPANY.social,
+    sameAs: settings.socials.map((s) => s.url),
   };
 
   const websiteLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: SITE_NAME,
+    name: settings.siteName,
     url: SITE_URL,
     inLanguage: "th",
     potentialAction: {
@@ -113,6 +124,7 @@ export default async function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
+        <AnalyticsHead ga4Id={settings.ga4Id} gtmId={settings.gtmId} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -131,6 +143,7 @@ export default async function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-on-background selection:bg-secondary-container">
+        <GtmNoScript gtmId={settings.gtmId} />
         <JsonLd data={organizationLd} />
         <JsonLd data={websiteLd} />
         <LanguageProvider>
@@ -138,6 +151,7 @@ export default async function RootLayout({
           <main className="flex-1">{children}</main>
           <SiteFooter />
         </LanguageProvider>
+        <CustomCode head={settings.customHeadHtml} body={settings.customBodyHtml} />
       </body>
     </html>
   );

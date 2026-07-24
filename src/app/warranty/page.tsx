@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
-import { getWarranties, getWarrantyPage } from "@/lib/queries";
+import { getWarranties, getWarrantyPage, getPageSeo } from "@/lib/queries";
 import { SITE_NAME } from "@/lib/seo";
 import { warrantyBadgeCls } from "@/lib/warranty-style";
 import { RichContent } from "@/components/rich-content";
@@ -13,12 +13,17 @@ function toMetaDescription(html: string, max = 160): string {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { title, subtitle, qrCodeUrl } = await getWarrantyPage();
-  const description = subtitle
-    ? toMetaDescription(subtitle)
-    : `เงื่อนไขการรับประกันและการเคลมสินค้าของ ${SITE_NAME}`;
+  const [{ title, subtitle }, seo] = await Promise.all([
+    getWarrantyPage(),
+    getPageSeo("/warranty"),
+  ]);
+  const description =
+    seo.metaDescription?.trim() ||
+    (subtitle
+      ? toMetaDescription(subtitle)
+      : `เงื่อนไขการรับประกันและการเคลมสินค้าของ ${SITE_NAME}`);
   return {
-    title: `${title} — ${SITE_NAME}`,
+    title: seo.metaTitle?.trim() || `${title} — ${SITE_NAME}`,
     description,
     alternates: { canonical: "/warranty" },
   };

@@ -1,6 +1,13 @@
 import "server-only";
 import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
+import {
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  COMPANY,
+} from "@/lib/seo";
 import type {
   CarouselSlide,
   Category,
@@ -8,9 +15,12 @@ import type {
   ContactCard,
   ContactPage,
   FeaturedCategoryGroup,
+  FooterLink,
   Product,
   ProductListItem,
   ProductQuery,
+  SiteSettings,
+  SocialLink,
   Warranty,
 } from "@/lib/types";
 
@@ -54,6 +64,8 @@ function mapCategory(row: any): Category {
     parentSlug: row.parentSlug ?? null,
     icon: row.icon,
     sortOrder: row.sort_order,
+    metaTitle: row.meta_title ?? null,
+    metaDescription: row.meta_description ?? null,
     imageUrl: row.image_url ?? null,
     imageProductId: row.image_product_id ?? null,
     disclaimer: row.disclaimer ?? null,
@@ -77,7 +89,7 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("categories")
-    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id, disclaimer, featured_banner_url")
+    .select("id, slug, name, name_th, icon, sort_order, parent_id, image_url, image_product_id, disclaimer, featured_banner_url, meta_title, meta_description")
     .order("sort_order");
 
   const rows = data ?? [];
@@ -299,7 +311,7 @@ export async function getProductBySlug(
   const { data } = await supabase
     .from("products")
     .select(
-      "id, slug, name, name_th, summary, description, summary_i18n, description_i18n, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, icon, color, sort_order))",
+      "id, slug, name, name_th, summary, description, summary_i18n, description_i18n, meta_title, meta_description, status, is_featured, category:categories!products_category_id_fkey(id, slug, name, name_th, icon, sort_order, parent_id, disclaimer), media:product_media(id, type, provider, url, alt, sort_order, is_primary), channels:product_channels(id, channel, url, sort_order), warranties:product_warranties(warranty:warranties(id, name, icon, color, sort_order))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -339,6 +351,8 @@ export async function getProductBySlug(
     descriptionI18n: row.description_i18n ?? {},
     status: row.status,
     isFeatured: row.is_featured,
+    metaTitle: row.meta_title ?? null,
+    metaDescription: row.meta_description ?? null,
     category,
     media: (row.media ?? [])
       .map((m: any) => ({
@@ -511,4 +525,116 @@ export async function getContactCards(): Promise<ContactCard[]> {
     label: c.label,
     value: c.value,
   }));
+}
+
+/* ----------------------------------------------------------- site settings */
+
+/** Coerce a jsonb value into an array of `{ platform, url }` (drops junk). */
+function asSocials(value: unknown): SocialLink[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((v) =>
+    v && typeof v === "object" && typeof (v as SocialLink).url === "string"
+      ? [{ platform: String((v as SocialLink).platform ?? ""), url: (v as SocialLink).url }]
+      : [],
+  );
+}
+
+/** Coerce a jsonb value into an array of `{ label, href }` (drops junk). */
+function asFooterLinks(value: unknown): FooterLink[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((v) =>
+    v && typeof v === "object" &&
+    typeof (v as FooterLink).label === "string" &&
+    typeof (v as FooterLink).href === "string"
+      ? [{ label: (v as FooterLink).label, href: (v as FooterLink).href }]
+      : [],
+  );
+}
+
+const nonEmpty = (v: string | null | undefined): string | null =>
+  v && v.trim() ? v : null;
+
+/**
+ * Site-wide SEO / business settings. Reads the singleton `site_settings` row and
+ * falls back to the `src/lib/seo.ts` constants for any unset field, so the site
+ * behaves identically before an admin ever opens the settings page. Memoized
+ * per-request with React `cache()` (never process-global — that would hide admin
+ * edits until the next deploy). Cookieless public client so static pages, the
+ * sitemap and robots can all read it at build/revalidate time.
+ */
+export const getSiteSettings = cache(async (): Promise<SiteSettings> => {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("site_settings")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const defaultSocials: SocialLink[] = COMPANY.social.map((url) => ({ platform: "", url }));
+
+  return {
+    siteName: nonEmpty(data?.site_name) ?? SITE_NAME,
+    siteTitle: nonEmpty(data?.site_title) ?? SITE_TITLE,
+    siteDescription: nonEmpty(data?.site_description) ?? SITE_DESCRIPTION,
+    siteKeywords: data?.site_keywords?.length ? data.site_keywords : [...SITE_KEYWORDS],
+    ogImageUrl: nonEmpty(data?.og_image_url) ?? "/og-default.png",
+    company: {
+      legalName: nonEmpty(data?.company_legal_name) ?? COMPANY.legalName,
+      legalNameTh: nonEmpty(data?.company_legal_name_th) ?? COMPANY.legalNameTh,
+      slogan: nonEmpty(data?.company_slogan) ?? COMPANY.slogan,
+      email: nonEmpty(data?.company_email) ?? COMPANY.email,
+      phone: nonEmpty(data?.company_phone) ?? COMPANY.phone,
+      mobile: nonEmpty(data?.company_mobile) ?? COMPANY.mobile,
+      fax: nonEmpty(data?.company_fax) ?? COMPANY.fax,
+      address: {
+        street: nonEmpty(data?.address_street) ?? COMPANY.address.street,
+        locality: nonEmpty(data?.address_locality) ?? COMPANY.address.locality,
+        region: nonEmpty(data?.address_region) ?? COMPANY.address.region,
+        postalCode: nonEmpty(data?.address_postal_code) ?? COMPANY.address.postalCode,
+        country: nonEmpty(data?.address_country) ?? COMPANY.address.country,
+      },
+      line: nonEmpty(data?.line_id) ?? COMPANY.line,
+    },
+    socials: data ? asSocials(data.socials) : defaultSocials,
+    footerLinks: data ? asFooterLinks(data.footer_links) : [],
+    ga4Id: nonEmpty(data?.ga4_id),
+    gtmId: nonEmpty(data?.gtm_id),
+    gscVerification: nonEmpty(data?.gsc_verification),
+    customHeadHtml: nonEmpty(data?.custom_head_html),
+    customBodyHtml: nonEmpty(data?.custom_body_html),
+    aiCrawlers: {
+      gptbot: data?.allow_gptbot ?? true,
+      claudebot: data?.allow_claudebot ?? true,
+      perplexitybot: data?.allow_perplexitybot ?? true,
+      googleExtended: data?.allow_google_extended ?? true,
+    },
+  };
+});
+
+/** Per-page meta overrides for the fixed routes, keyed by path. */
+export async function getPageSeoMap(): Promise<
+  Record<string, { metaTitle: string | null; metaDescription: string | null }>
+> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("page_seo")
+    .select("path, meta_title, meta_description");
+  const map: Record<string, { metaTitle: string | null; metaDescription: string | null }> = {};
+  for (const row of data ?? []) {
+    map[row.path] = { metaTitle: row.meta_title, metaDescription: row.meta_description };
+  }
+  return map;
+}
+
+/** A single page's meta override (or nulls when unset/missing). */
+export async function getPageSeo(
+  path: string,
+): Promise<{ metaTitle: string | null; metaDescription: string | null }> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("page_seo")
+    .select("meta_title, meta_description")
+    .eq("path", path)
+    .maybeSingle();
+  return { metaTitle: data?.meta_title ?? null, metaDescription: data?.meta_description ?? null };
 }

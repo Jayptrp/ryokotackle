@@ -1,24 +1,26 @@
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { BrandIcon } from "@/components/brand-icon";
-import { COMPANY, SITE_NAME } from "@/lib/seo";
+import { getSiteSettings } from "@/lib/queries";
 
-const FOOTER_LINKS = [
-  { href: "/warranty", label: "ประกันและอะไหล่" },
-  // { href: "/privacy", label: "นโยบายความเป็นส่วนตัว" },
-  // { href: "/terms", label: "ข้อกำหนดและเงื่อนไข" },
-  // { href: "/shipping", label: "การจัดส่ง" },
-] as const;
+/** Human label for a social platform key (falls back to the key itself). */
+const SOCIAL_LABEL: Record<string, string> = {
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+  instagram: "Instagram",
+  line: "LINE",
+  x: "X",
+  twitter: "X",
+};
 
-const SOCIAL = [
-  { href: "https://www.facebook.com/ryoko.tackle", label: "Facebook", brand: "facebook" },
-  { href: "https://www.tiktok.com/@ryoko.tackle", label: "TikTok", brand: "tiktok" },
-  { href: "https://www.youtube.com/@ryoko.tackle", label: "YouTube", brand: "youtube" },
-  { href: "https://www.instagram.com/ryoko.tackle", label: "Instagram", brand: "instagram" },
-] as const;
+/** Whether an href points outside the site (renders as a real anchor). */
+const isExternal = (href: string) => /^https?:\/\//i.test(href) || href.startsWith("mailto:");
 
-export function SiteFooter() {
-  const { address } = COMPANY;
+export async function SiteFooter() {
+  const settings = await getSiteSettings();
+  const { company } = settings;
+  const { address } = company;
   const year = new Date().getFullYear();
 
   return (
@@ -27,29 +29,29 @@ export function SiteFooter() {
         {/* Brand + NAP */}
         <div className="md:col-span-5">
           <span className="font-headline-sm text-headline-sm font-bold text-primary">
-            {SITE_NAME}
+            {settings.siteName}
           </span>
           <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">
-            {COMPANY.slogan}
+            {company.slogan}
           </p>
           <address className="mt-stack-md not-italic font-body-sm text-body-sm leading-relaxed text-on-surface-variant">
-            {COMPANY.legalNameTh}
+            {company.legalNameTh}
             <br />
             {address.street}, {address.locality}, {address.region} {address.postalCode}
             <br />
             โทร{" "}
-            <a href={`tel:${COMPANY.phone}`} className="hover:text-primary">
-              {COMPANY.phone}
+            <a href={`tel:${company.phone}`} className="hover:text-primary">
+              {company.phone}
             </a>{" "}
             ·{" "}
-            <a href={`tel:${COMPANY.mobile}`} className="hover:text-primary">
-              {COMPANY.mobile}
+            <a href={`tel:${company.mobile}`} className="hover:text-primary">
+              {company.mobile}
             </a>
             <br />
-            <a href={`mailto:${COMPANY.email}`} className="hover:text-primary">
-              {COMPANY.email}
+            <a href={`mailto:${company.email}`} className="hover:text-primary">
+              {company.email}
             </a>{" "}
-            · LINE {COMPANY.line}
+            · LINE {company.line}
           </address>
         </div>
 
@@ -58,49 +60,55 @@ export function SiteFooter() {
           <span className="font-label-caps text-label-caps text-on-surface-variant">
             ลิงก์
           </span>
-          <Link href="/products" className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary">
-            สินค้าทั้งหมด
-          </Link>
-          <Link href="/contact" className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary">
-            ติดต่อเรา
-          </Link>
-          {FOOTER_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {settings.footerLinks.map((link) =>
+            isExternal(link.href) ? (
+              <a
+                key={link.href}
+                href={link.href}
+                className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="font-body-sm text-body-sm text-on-surface-variant transition-colors hover:text-secondary"
+              >
+                {link.label}
+              </Link>
+            ),
+          )}
         </nav>
 
         {/* Social */}
-        <div className="flex flex-col gap-stack-sm md:col-span-3">
-          <span className="font-label-caps text-label-caps text-on-surface-variant">
-            ติดตามเรา
-          </span>
-          <div className="flex gap-stack-md">
-            {SOCIAL.map((s) => (
-              <a
-                key={s.href}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={s.label}
-                className="text-on-surface-variant transition-colors hover:text-primary"
-              >
-                <BrandIcon name={s.brand} className="text-xl" />
-              </a>
-            ))}
+        {settings.socials.length > 0 && (
+          <div className="flex flex-col gap-stack-sm md:col-span-3">
+            <span className="font-label-caps text-label-caps text-on-surface-variant">
+              ติดตามเรา
+            </span>
+            <div className="flex gap-stack-md">
+              {settings.socials.map((s) => (
+                <a
+                  key={s.url}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={SOCIAL_LABEL[s.platform] ?? s.platform ?? "Social"}
+                  className="text-on-surface-variant transition-colors hover:text-primary"
+                >
+                  <BrandIcon name={s.platform} fallback="link" className="text-xl" />
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </Container>
 
       <div className="border-t border-outline-variant">
         <Container className="py-stack-md">
           <p className="font-body-sm text-body-sm text-on-surface-variant">
-            © {year} {COMPANY.legalName} — All Rights Reserved.
+            © {year} {company.legalName} — All Rights Reserved.
           </p>
         </Container>
       </div>

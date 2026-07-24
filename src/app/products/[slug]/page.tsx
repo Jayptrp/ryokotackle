@@ -60,16 +60,18 @@ export async function generateMetadata({
   // English `name` is kept only as an alternate alias below.
   const displayName = product.nameTh ?? product.name;
 
-  // Title: "{Name} | {Category}" — keyword-rich but concise.
+  // Title: manual SEO override if set, else "{Name} | {Category}" — keyword-rich
+  // but concise.
   const titleParts = [
     displayName,
     product.category ? `| ${product.category.nameTh ?? product.category.name}` : "",
   ].filter(Boolean);
-  const title = titleParts.join(" ").trim();
+  const title = product.metaTitle?.trim() || titleParts.join(" ").trim();
 
-  // Description: prefer the brief summary, fall back to the rich detail, then
-  // a generated line that still carries the core keywords.
+  // Description: manual override if set, else prefer the brief summary, fall back
+  // to the rich detail, then a generated line that still carries core keywords.
   const description =
+    product.metaDescription?.trim() ||
     (product.summary ? toMetaDescription(product.summary) : "") ||
     (product.description ? toMetaDescription(product.description) : "") ||
     `${displayName} — ${

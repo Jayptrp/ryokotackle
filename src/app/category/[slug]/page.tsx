@@ -31,15 +31,18 @@ export async function generateMetadata({
     return { title: "ไม่พบหมวดหมู่", robots: { index: false, follow: false } };
   }
   const label = category.nameTh ?? category.name;
-  const description = `เลือกซื้อ${label} คุณภาพสูงจาก ${SITE_NAME} — รวมอุปกรณ์ตกปลาหลากหลายแบรนด์ พร้อมจัดส่งทั่วประเทศ`;
+  const title = category.metaTitle?.trim() || label;
+  const description =
+    category.metaDescription?.trim() ||
+    `เลือกซื้อ${label} คุณภาพสูงจาก ${SITE_NAME} — รวมอุปกรณ์ตกปลาหลากหลายแบรนด์ พร้อมจัดส่งทั่วประเทศ`;
   const canonical = `/category/${category.slug}`;
   return {
-    title: label,
+    title,
     description,
     alternates: { canonical },
     openGraph: {
       type: "website",
-      title: `${label} | ${SITE_NAME}`,
+      title: `${title} | ${SITE_NAME}`,
       description,
       url: absoluteUrl(canonical),
     },

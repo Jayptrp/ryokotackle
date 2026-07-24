@@ -110,6 +110,8 @@ export type Database = {
           id: string
           image_product_id: string | null
           image_url: string | null
+          meta_description: string | null
+          meta_title: string | null
           name: string
           name_th: string | null
           parent_id: string | null
@@ -124,6 +126,8 @@ export type Database = {
           id?: string
           image_product_id?: string | null
           image_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           name: string
           name_th?: string | null
           parent_id?: string | null
@@ -138,6 +142,8 @@ export type Database = {
           id?: string
           image_product_id?: string | null
           image_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           name?: string
           name_th?: string | null
           parent_id?: string | null
@@ -160,6 +166,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contact_cards: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id?: string
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
+      contact_page: {
+        Row: {
+          address: string | null
+          id: number
+          intro: string | null
+          location_desc: string | null
+          map_lat: number | null
+          map_lng: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          id?: number
+          intro?: string | null
+          location_desc?: string | null
+          map_lat?: number | null
+          map_lng?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          id?: number
+          intro?: string | null
+          location_desc?: string | null
+          map_lat?: number | null
+          map_lng?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      page_seo: {
+        Row: {
+          label: string
+          meta_description: string | null
+          meta_title: string | null
+          path: string
+          updated_at: string
+        }
+        Insert: {
+          label: string
+          meta_description?: string | null
+          meta_title?: string | null
+          path: string
+          updated_at?: string
+        }
+        Update: {
+          label?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          path?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       pages: {
         Row: {
@@ -305,7 +392,7 @@ export type Database = {
       }
       products: {
         Row: {
-          brand_id: string | null
+          brand_id: string
           category_id: string | null
           created_at: string
           description: string | null
@@ -313,6 +400,8 @@ export type Database = {
           id: string
           is_featured: boolean
           legacy_category: string | null
+          meta_description: string | null
+          meta_title: string | null
           name: string
           name_th: string | null
           search: unknown
@@ -323,7 +412,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          brand_id?: string | null
+          brand_id?: string
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -331,6 +420,8 @@ export type Database = {
           id?: string
           is_featured?: boolean
           legacy_category?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           name: string
           name_th?: string | null
           search?: unknown
@@ -341,7 +432,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          brand_id?: string | null
+          brand_id?: string
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -349,6 +440,8 @@ export type Database = {
           id?: string
           is_featured?: boolean
           legacy_category?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           name?: string
           name_th?: string | null
           search?: unknown
@@ -374,6 +467,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      site_settings: {
+        Row: {
+          address_country: string | null
+          address_locality: string | null
+          address_postal_code: string | null
+          address_region: string | null
+          address_street: string | null
+          allow_claudebot: boolean
+          allow_google_extended: boolean
+          allow_gptbot: boolean
+          allow_perplexitybot: boolean
+          company_email: string | null
+          company_fax: string | null
+          company_legal_name: string | null
+          company_legal_name_th: string | null
+          company_mobile: string | null
+          company_phone: string | null
+          company_slogan: string | null
+          custom_body_html: string | null
+          custom_head_html: string | null
+          footer_links: Json
+          ga4_id: string | null
+          gsc_verification: string | null
+          gtm_id: string | null
+          id: number
+          line_id: string | null
+          og_image_url: string | null
+          site_description: string | null
+          site_keywords: string[]
+          site_name: string | null
+          site_title: string | null
+          socials: Json
+          updated_at: string
+        }
+        Insert: {
+          address_country?: string | null
+          address_locality?: string | null
+          address_postal_code?: string | null
+          address_region?: string | null
+          address_street?: string | null
+          allow_claudebot?: boolean
+          allow_google_extended?: boolean
+          allow_gptbot?: boolean
+          allow_perplexitybot?: boolean
+          company_email?: string | null
+          company_fax?: string | null
+          company_legal_name?: string | null
+          company_legal_name_th?: string | null
+          company_mobile?: string | null
+          company_phone?: string | null
+          company_slogan?: string | null
+          custom_body_html?: string | null
+          custom_head_html?: string | null
+          footer_links?: Json
+          ga4_id?: string | null
+          gsc_verification?: string | null
+          gtm_id?: string | null
+          id?: number
+          line_id?: string | null
+          og_image_url?: string | null
+          site_description?: string | null
+          site_keywords?: string[]
+          site_name?: string | null
+          site_title?: string | null
+          socials?: Json
+          updated_at?: string
+        }
+        Update: {
+          address_country?: string | null
+          address_locality?: string | null
+          address_postal_code?: string | null
+          address_region?: string | null
+          address_street?: string | null
+          allow_claudebot?: boolean
+          allow_google_extended?: boolean
+          allow_gptbot?: boolean
+          allow_perplexitybot?: boolean
+          company_email?: string | null
+          company_fax?: string | null
+          company_legal_name?: string | null
+          company_legal_name_th?: string | null
+          company_mobile?: string | null
+          company_phone?: string | null
+          company_slogan?: string | null
+          custom_body_html?: string | null
+          custom_head_html?: string | null
+          footer_links?: Json
+          ga4_id?: string | null
+          gsc_verification?: string | null
+          gtm_id?: string | null
+          id?: number
+          line_id?: string | null
+          og_image_url?: string | null
+          site_description?: string | null
+          site_keywords?: string[]
+          site_name?: string | null
+          site_title?: string | null
+          socials?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       warranties: {
         Row: {
@@ -405,63 +600,6 @@ export type Database = {
           name?: string
           sort_order?: number
           updated_at?: string
-        }
-        Relationships: []
-      }
-      contact_page: {
-        Row: {
-          address: string | null
-          id: number
-          intro: string | null
-          location_desc: string | null
-          map_lat: number | null
-          map_lng: number | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          id?: number
-          intro?: string | null
-          location_desc?: string | null
-          map_lat?: number | null
-          map_lng?: number | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          id?: number
-          intro?: string | null
-          location_desc?: string | null
-          map_lat?: number | null
-          map_lng?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      contact_cards: {
-        Row: {
-          created_at: string
-          icon: string
-          id: string
-          label: string
-          sort_order: number
-          value: string
-        }
-        Insert: {
-          created_at?: string
-          icon?: string
-          id?: string
-          label: string
-          sort_order?: number
-          value: string
-        }
-        Update: {
-          created_at?: string
-          icon?: string
-          id?: string
-          label?: string
-          sort_order?: number
-          value?: string
         }
         Relationships: []
       }
