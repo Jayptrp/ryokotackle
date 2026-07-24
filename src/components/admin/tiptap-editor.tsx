@@ -176,6 +176,18 @@ export function TiptapEditor({
     },
   });
 
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("ใส่ลิงก์ (URL)", previousUrl ?? "https://");
+    if (url === null) return; // cancelled
+    if (url.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
+  }, [editor]);
+
   const uploadInlineImage = useCallback(async () => {
     if (!editor || !productId) return;
     const input = document.createElement("input");
@@ -259,6 +271,17 @@ export function TiptapEditor({
         <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Ordered list">
           <Icon name="format_list_numbered" className="text-base" />
         </ToolBtn>
+
+        <div className="mx-1 h-5 w-px bg-outline-variant" />
+
+        <ToolBtn onClick={setLink} active={editor.isActive("link")} title="แทรกลิงก์">
+          <Icon name="link" className="text-base" />
+        </ToolBtn>
+        {editor.isActive("link") && (
+          <ToolBtn onClick={() => editor.chain().focus().unsetLink().run()} title="ลบลิงก์">
+            <Icon name="link_off" className="text-base" />
+          </ToolBtn>
+        )}
 
         <div className="mx-1 h-5 w-px bg-outline-variant" />
 

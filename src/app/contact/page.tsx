@@ -2,17 +2,21 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
 import { BrandIcon } from "@/components/brand-icon";
-import { getContactCards, getContactPage } from "@/lib/queries";
+import { getContactCards, getContactPage, getPageSeo } from "@/lib/queries";
 import { COMPANY } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "ติดต่อเรา — Ryoko Tackle",
-  description:
-    "ติดต่อ Ryoko Tackle (บริษัท ที.อาร์.วาย.ฟิชชิ่ง แทคเคิล จำกัด) " +
-    "289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1 ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540 " +
-    `โทร ${COMPANY.phone}`,
-  alternates: { canonical: "/contact" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await getPageSeo("/contact");
+  return {
+    title: seo.metaTitle?.trim() || "ติดต่อเรา — Ryoko Tackle",
+    description:
+      seo.metaDescription?.trim() ||
+      "ติดต่อ Ryoko Tackle (บริษัท ที.อาร์.วาย.ฟิชชิ่ง แทคเคิล จำกัด) " +
+        "289/11 หมู่ 13 ซ.กิ่งแก้ว 25/1 ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540 " +
+        `โทร ${COMPANY.phone}`,
+    alternates: { canonical: "/contact" },
+  };
+}
 
 // Default store coordinates (used when the admin hasn't set a pin).
 const DEFAULT_LAT = 13.6812373;

@@ -9,6 +9,7 @@ import { LocalizedEditor } from "@/components/admin/localized-editor";
 import { MediaManager, type PendingMedia } from "@/components/admin/media-manager";
 import { ChannelManager, type ChannelRow } from "@/components/admin/channel-manager";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
+import { MetaField } from "@/components/admin/meta-length";
 import { Icon } from "@/components/icon";
 import type { ProductMedia } from "@/lib/types";
 
@@ -32,6 +33,8 @@ interface ProductData {
   categoryId: string | null;
   status: string;
   isFeatured: boolean;
+  metaTitle: string | null;
+  metaDescription: string | null;
   media: ProductMedia[];
   channels: ChannelRow[];
   warrantyIds: string[];
@@ -167,6 +170,8 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
   const [descriptionI18n, setDescriptionI18n] = useState<Record<string, string>>(
     product?.descriptionI18n ?? {},
   );
+  const [metaTitle, setMetaTitle] = useState(product?.metaTitle ?? "");
+  const [metaDescription, setMetaDescription] = useState(product?.metaDescription ?? "");
 
   const initialChannels: ChannelRow[] =
     (product?.channels ?? []).length > 0
@@ -195,6 +200,8 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
     description: product?.description ?? "",
     summaryI18n: product?.summaryI18n ?? {},
     descriptionI18n: product?.descriptionI18n ?? {},
+    metaTitle: product?.metaTitle ?? "",
+    metaDescription: product?.metaDescription ?? "",
     media: product?.media ?? [] as ProductMedia[],
     channels: initialChannels,
     warrantyIds: product?.warrantyIds ?? [],
@@ -215,6 +222,8 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
     media: isMediaDirty(mediaItems, orig.current.media),
     channels: !isChannelsEqual(channels, orig.current.channels),
     warranties: !isSetEqual(warrantyIds, orig.current.warrantyIds),
+    metaTitle: metaTitle !== (orig.current.metaTitle ?? ""),
+    metaDescription: metaDescription !== (orig.current.metaDescription ?? ""),
   };
 
   const sectionDirty = {
@@ -224,6 +233,7 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
     channels: d.channels,
     description: d.description || d.descriptionI18n,
     warranties: d.warranties,
+    seo: d.metaTitle || d.metaDescription,
   };
 
   const isDirty = Object.values(sectionDirty).some(Boolean);
@@ -262,6 +272,10 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
     setDescription(orig.current.description ?? "");
     setDescriptionI18n(orig.current.descriptionI18n);
     setDescriptionKey((k) => k + 1); // remount Tiptap with original content
+  }
+  function revertSeo() {
+    setMetaTitle(orig.current.metaTitle ?? "");
+    setMetaDescription(orig.current.metaDescription ?? "");
   }
 
   // ── form submit ───────────────────────────────────────────────────────────
@@ -538,6 +552,38 @@ export function ProductEditor({ isNew, pageError, product, categories, brands, d
               onThUpdate={setDescription}
               onI18nUpdate={setDescriptionI18n}
             />
+          </SectionBlock>
+        )}
+
+        {/* ── SEO (Meta Title / Description) ────────────── */}
+        {!isNew && product && (
+          <SectionBlock
+            title="SEO — Meta Title / Description"
+            subtitle="กำหนดเอง (ไม่บังคับ) — เว้นว่างเพื่อให้ระบบสร้างจากชื่อสินค้าและหมวดหมู่ให้อัตโนมัติ"
+            isDirty={sectionDirty.seo}
+            onRevert={revertSeo}
+          >
+            <div className="flex flex-col gap-4">
+              <MetaField label="Meta Title" text={metaTitle} budgetPx={580}>
+                <input
+                  name="meta_title"
+                  value={metaTitle}
+                  onChange={(e) => setMetaTitle(e.target.value)}
+                  placeholder="เว้นว่าง = ใช้ค่าอัตโนมัติจากชื่อสินค้า | หมวดหมู่"
+                  className={`rounded-lg border bg-white px-4 py-3 font-body-md text-body-md outline-none ${inputCls(d.metaTitle)}`}
+                />
+              </MetaField>
+              <MetaField label="Meta Description" text={metaDescription} budgetPx={1000} fontPx={14}>
+                <textarea
+                  name="meta_description"
+                  rows={2}
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  placeholder="เว้นว่าง = ใช้ค่าอัตโนมัติจากคำอธิบายสั้น/รายละเอียด"
+                  className={`resize-y rounded-lg border bg-white px-4 py-3 font-body-md text-body-md outline-none ${inputCls(d.metaDescription)}`}
+                />
+              </MetaField>
+            </div>
           </SectionBlock>
         )}
       </form>

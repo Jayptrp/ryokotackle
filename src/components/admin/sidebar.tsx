@@ -7,7 +7,15 @@ import { cn } from "@/lib/utils";
 import { signOut } from "@/app/admin/auth/actions";
 import { usePathname } from "next/navigation";
 
-type NavItem = { href: string; label: string; icon: string; exact?: boolean };
+type NavChild = { href: string; label: string; icon: string };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  exact?: boolean;
+  /** When present, this item is a collapsible parent; `href` is only its key. */
+  children?: NavChild[];
+};
 
 const GROUPS: { label: string; items: NavItem[] }[] = [
   {
@@ -34,17 +42,32 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/admin/home/featured", label: "แก้ไขสินค้าแนะนำ", icon: "star" },
     ],
   },
+  {
+    label: "SEO",
+    items: [
+      {
+        href: "/admin/seo/settings",
+        label: "ตั้งค่า SEO",
+        icon: "travel_explore",
+        children: [
+          { href: "/admin/seo/settings/website", label: "ข้อมูลเว็บไซต์", icon: "language" },
+          { href: "/admin/seo/settings/company", label: "ข้อมูลบริษัท (NAP)", icon: "domain" },
+          { href: "/admin/seo/settings/tools", label: "เครื่องมือวัดผล", icon: "monitoring" },
+        ],
+      },
+    ],
+  },
 ];
-
 
 export function Sidebar({ userEmail }: { userEmail?: string }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [openParents, setOpenParents] = useState<Record<string, boolean>>({});
   const pathname = usePathname();
 
-  const isActive = (href: string, exact = false) => {
-    if (exact) return pathname === href;
-    return pathname.startsWith(href);
-  };
+  const isActive = (href: string, exact = false) =>
+    exact ? pathname === href : pathname.startsWith(href);
+
+  const childActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <aside
@@ -102,6 +125,87 @@ export function Sidebar({ userEmail }: { userEmail?: string }) {
             </div>
 
             {group.items.map((item) => {
+              // ── Collapsible parent (has children) ──────────────────────────
+              if (item.children) {
+                const hasActiveChild = item.children.some((c) => childActive(c.href));
+                const open = openParents[item.href] ?? hasActiveChild;
+                return (
+                  <div key={item.href} className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenParents((s) => ({ ...s, [item.href]: !open }))
+                      }
+                      title={isCollapsed ? item.label : undefined}
+                      className={cn(
+                        "group flex items-center rounded-xl px-3 py-2.5 transition-all duration-200",
+                        hasActiveChild
+                          ? "bg-primary/10 text-primary"
+                          : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
+                        isCollapsed ? "justify-center px-0 mx-1" : "gap-3"
+                      )}
+                    >
+                      <Icon
+                        name={item.icon}
+                        filled={hasActiveChild}
+                        className={cn("text-xl flex-none", !hasActiveChild && "group-hover:scale-110 transition-transform")}
+                      />
+                      {!isCollapsed && (
+                        <>
+                          <span className={cn("flex-1 truncate text-left font-body-sm text-body-sm", hasActiveChild && "font-medium")}>
+                            {item.label}
+                          </span>
+                          <Icon
+                            name="expand_more"
+                            className={cn("text-lg flex-none transition-transform duration-200", open && "rotate-180")}
+                          />
+                        </>
+                      )}
+                    </button>
+
+                    {/* Children */}
+                    {open && (
+                      <div
+                        className={cn(
+                          "flex flex-col gap-1",
+                          isCollapsed ? "items-center" : "ml-4 border-l border-outline-variant pl-2"
+                        )}
+                      >
+                        {item.children.map((child) => {
+                          const active = childActive(child.href);
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              title={isCollapsed ? child.label : undefined}
+                              className={cn(
+                                "group flex items-center rounded-lg transition-all duration-200",
+                                active
+                                  ? "bg-primary/10 text-primary"
+                                  : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
+                                isCollapsed ? "h-9 w-9 justify-center" : "gap-2.5 px-3 py-2"
+                              )}
+                            >
+                              <Icon
+                                name={child.icon}
+                                filled={active}
+                                className={cn("text-lg flex-none", !active && "group-hover:scale-110 transition-transform")}
+                              />
+                              {!isCollapsed && (
+                                <span className={cn("truncate font-body-sm text-body-sm", active && "font-medium")}>
+                                  {child.label}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // ── Flat item ──────────────────────────────────────────────────
               const active = isActive(item.href, item.exact);
               return (
                 <Link
