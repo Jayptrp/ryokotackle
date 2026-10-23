@@ -1,18 +1,23 @@
 // Shared helpers for the product-media maintenance scripts
-// (compress-storage.mjs, list-orphans.mjs).
+// (compress-storage.mjs, list-orphans.mjs, delete-orphans.mjs,
+// generate-variants.mjs).
 //
 // Loads Supabase credentials from .env.local (same pattern as
 // import-legacy-media.mjs), walks the whole product-media bucket, and builds an
 // index of which storage paths are still referenced by the database.
 //
 // IMPORTANT: a file is "referenced" if its path appears EITHER in a url column
-// (product_media.url, categories.image_url, carousel_slides.image_url) OR as a
-// substring inside a rich-text body (products.description, products.summary,
-// pages.content). Tiptap inline images live only inside those bodies — checking
-// url columns alone produces false orphans and would delete live images.
+// (product_media.url, categories.image_url / featured_banner_url,
+// carousel_slides.image_url, warranty_page.qr_code_url,
+// site_settings.og_image_url) OR as a substring inside a rich-text body
+// (products.description / summary and their *_i18n translations, pages.content),
+// OR it is a size variant of a url-column image (see image-variants.mjs). Tiptap
+// inline images live only inside those bodies — checking url columns alone
+// produces false orphans and would delete live images.
 
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { variantPath, variantsForPath } from "./image-variants.mjs";
 
 export const BUCKET = "product-media";
 
@@ -104,8 +109,9 @@ export async function selectAll(sb, table, cols) {
 
 /**
  * Build the reference index. Returns:
- *   urlPaths: Set<string> — paths referenced by a url column
- *   bodies:   string[]     — rich-text bodies to substring-match against
+ *   urlPaths:     Set<string> — paths referenced by a url column
+ *   variantPaths: Set<string> — size variants of those (live: pages load them)
+ *   bodies:       string[]    — rich-text bodies to substring-match against
  *   isReferenced(path): boolean
  */
 export async function loadReferenceIndex(sb) {
@@ -115,21 +121,34 @@ export async function loadReferenceIndex(sb) {
     if (p) urlPaths.add(p);
   };
 
-  const [media, cats, slides, prods, pages] = await Promise.all([
+  const [media, cats, slides, warranty, site, prods, pages] = await Promise.all([
     selectAll(sb, "product_media", "url"),
-    selectAll(sb, "categories", "image_url"),
+    selectAll(sb, "categories", "image_url, featured_banner_url"),
     selectAll(sb, "carousel_slides", "image_url"),
-    selectAll(sb, "products", "description, summary"),
+    selectAll(sb, "warranty_page", "qr_code_url"),
+    selectAll(sb, "site_settings", "og_image_url"),
+    selectAll(sb, "products", "description, summary, description_i18n, summary_i18n"),
     selectAll(sb, "pages", "content"),
   ]);
   for (const r of media) addUrl(r.url);
-  for (const r of cats) addUrl(r.image_url);
+  for (const r of cats) {
+    addUrl(r.image_url);
+    addUrl(r.featured_banner_url);
+  }
   for (const r of slides) addUrl(r.image_url);
+  for (const r of warranty) addUrl(r.qr_code_url);
+  for (const r of site) addUrl(r.og_image_url);
+
+  const variantPaths = new Set();
+  for (const p of urlPaths) for (const v of variantsForPath(p)) variantPaths.add(variantPath(p, v));
 
   const bodies = [];
   for (const r of prods) {
     if (r.description) bodies.push(r.description);
     if (r.summary) bodies.push(r.summary);
+    // Translations are { "<lang>": "<html>" } objects — search them as text.
+    if (r.description_i18n) bodies.push(JSON.stringify(r.description_i18n));
+    if (r.summary_i18n) bodies.push(JSON.stringify(r.summary_i18n));
   }
   for (const r of pages) if (r.content) bodies.push(r.content);
 
@@ -137,9 +156,10 @@ export async function loadReferenceIndex(sb) {
 
   return {
     urlPaths,
+    variantPaths,
     bodies,
     isReferenced(path) {
-      return urlPaths.has(path) || bodyBlob.includes(path);
+      return urlPaths.has(path) || variantPaths.has(path) || bodyBlob.includes(path);
     },
   };
 }

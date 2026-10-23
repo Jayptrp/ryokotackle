@@ -113,6 +113,39 @@ client-side filtering), `getFeatured`, `getNewArrivals`, `getProductBySlug`,
 longer used by public pages — see the Rendering section.) Domain types in
 `src/lib/types.ts`; channel display metadata in `src/lib/channels.ts`.
 
+## Image variants — keep Storage egress down ⚠️
+
+Supabase Free allows **5 GB cached + 5 GB uncached egress per month**, and serving images
+from the `product-media` bucket was nearly all of it (a day of logs in Oct 2026: ~287 MB,
+~98% real visitors, mostly full-size originals loaded into small slots). So public pages
+load **smaller copies ("variants")** stored next to each original:
+
+| Variant | Longest edge | Used for |
+|---|---|---|
+| `thumb` | 200px | product gallery thumbnail strip |
+| `card` | 640px | product cards, home category cards |
+| `banner-sm` / `banner` | 800 / 1600px | hero carousel + featured banners (phones get `banner-sm` via `<picture>`) |
+
+- Naming: `<path>.<ext>` → `<path>.<variant>.jpg` (always JPEG). Which variants an image
+  has depends only on its folder: `<productId>/media|legacy/` → thumb + card;
+  `home/category/` → card; `home/carousel/`, `home/featured-banner/` → banners. GIFs,
+  inline description images etc. have none. The rule lives in `src/lib/image-variants.ts`,
+  mirrored in `scripts/lib/image-variants.mjs` — **keep the two in sync**.
+- **Render bucket images in public slots with `<VariantImage variant=…>`**
+  (`src/components/variant-image.tsx`), not a bare `next/image`. It falls back to the
+  original when a variant is missing, so nothing breaks — but each fallback costs a wasted
+  request plus the full-size download. The gallery's main viewer and lightbox keep the
+  original on purpose.
+- **Created on upload:** the admin's browser makes them (`buildImageUploadForm` in
+  `src/lib/compress-image.ts`, same canvas code as compression) and `/api/admin/upload`
+  stores them. Deleting an image in the admin deletes its variants too (`withVariantPaths`).
+- **Backfill** (images from before variants existed, bulk imports, or after changing a
+  size with `--force`): `node scripts/generate-variants.mjs` (dry run, downloads nothing)
+  → `--prefix <productId> --commit` → `--commit`. Needs `SUPABASE_SECRET_KEY` in
+  `.env.local`; safe to re-run, it only fills gaps.
+- The orphan scripts (`list-orphans` / `delete-orphans`) treat a referenced image's
+  variants as referenced, and `compress-storage` skips variants.
+
 ## URL structure
 
 - `/` — home (category grid, featured, new arrivals)
@@ -179,7 +212,8 @@ Excluded rows (diagrams, blank/test, duplicates, vague catch-alls) are in
 - **Keep public routes static** — no per-request SSR for browsing (see Rendering).
 - **Deploy via GitHub Actions**, not local `npm run deploy` on Windows (see Deployment).
 - Remote images render with `unoptimized` (no Workers image optimizer); allowed hosts
-  (incl. `*.supabase.co` for uploaded media) are in `next.config.ts`.
+  (incl. `*.supabase.co` for uploaded media) are in `next.config.ts`. Right-sizing comes
+  from stored variants instead — public image slots use `<VariantImage>` (see Image variants).
 - Categories/products display `nameTh ?? name`.
 - Windows dev: `LF will be replaced by CRLF` git warnings are harmless; LibreOffice is not
   installed (can't render PPTX locally).

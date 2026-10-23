@@ -7,6 +7,8 @@
 //   • png/webp  → convert to .jpg, rewrite every DB reference (url columns AND
 //                 rich-text bodies), then delete the original
 //   • gif/video → skipped (animation / not an image)
+//   • size variants (*.thumb.jpg etc.) → skipped (already small; made from the
+//     originals by generate-variants.mjs)
 //   • images that wouldn't shrink → skipped (keeps transparency-heavy PNGs,
 //     which is why the Ryoko logo-style graphics stay as-is)
 //
@@ -22,7 +24,8 @@
 //   node scripts/compress-storage.mjs --prefix <pid> --commit   # test one product first
 //
 // STRONGLY recommended: take a DB backup (pg_dump) before --commit, because the
-// png→jpg path rewrites edit products/pages/product_media/categories/carousel.
+// png→jpg path rewrites edit products/pages/product_media/categories/carousel/
+// warranty_page/site_settings.
 
 import sharp from "sharp";
 import { createSb, BUCKET, listAllObjects, loadReferenceIndex, urlToPath, selectAll } from "./lib/media-refs.mjs";
@@ -49,7 +52,8 @@ const candidates = allObjects.filter(
   (o) =>
     COMPRESSIBLE.has(ext(o.path)) &&
     (!prefix || o.path.startsWith(prefix)) &&
-    refIndex.isReferenced(o.path), // skip orphans — kept pristine for the boss review
+    refIndex.isReferenced(o.path) && // skip orphans — kept pristine for the boss review
+    !refIndex.variantPaths.has(o.path), // variants are already small JPEGs
 );
 
 console.log(`${allObjects.length} objects total, ${candidates.length} referenced & compressible to inspect.\n`);
@@ -128,7 +132,10 @@ if (renames.size) {
     };
     await rewriteUrlColumn("product_media", "url");
     await rewriteUrlColumn("categories", "image_url");
+    await rewriteUrlColumn("categories", "featured_banner_url");
     await rewriteUrlColumn("carousel_slides", "image_url");
+    await rewriteUrlColumn("warranty_page", "qr_code_url");
+    await rewriteUrlColumn("site_settings", "og_image_url");
 
     // Rich-text bodies: replace the path substring everywhere it appears.
     const rewriteBody = async (table, cols) => {
@@ -136,12 +143,15 @@ if (renames.size) {
       for (const row of rows) {
         const patch = {};
         for (const col of cols) {
-          let text = row[col];
-          if (!text) continue;
+          const value = row[col];
+          if (!value) continue;
+          // *_i18n columns are jsonb objects — rewrite their JSON text.
+          const before = typeof value === "string" ? value : JSON.stringify(value);
+          let text = before;
           for (const [oldP, newP] of renames) {
             if (text.includes(oldP)) text = text.split(oldP).join(newP);
           }
-          if (text !== row[col]) patch[col] = text;
+          if (text !== before) patch[col] = typeof value === "string" ? text : JSON.parse(text);
         }
         if (Object.keys(patch).length) {
           const { error: uErr } = await sb.from(table).update(patch).eq("id", row.id);
@@ -149,7 +159,7 @@ if (renames.size) {
         }
       }
     };
-    await rewriteBody("products", ["description", "summary"]);
+    await rewriteBody("products", ["description", "summary", "description_i18n", "summary_i18n"]);
     await rewriteBody("pages", ["content"]);
 
     // Only now is it safe to delete the originals (references moved to .jpg).
