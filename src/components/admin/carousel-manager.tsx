@@ -11,7 +11,7 @@ import {
 import { saveCarousel } from "@/app/admin/home/actions";
 import { Icon } from "@/components/icon";
 import { ProductImagePicker, ProductTextCombobox } from "./product-combobox";
-import { compressImage } from "@/lib/compress-image";
+import { buildImageUploadForm } from "@/lib/compress-image";
 import type { CarouselSlide } from "@/lib/types";
 
 export interface ProductOption {
@@ -118,11 +118,7 @@ export function CarouselManager({
       const ratio = await readImageAspect(file);
       // 3:1 target; flag anything outside ~2.7:1–3.3:1.
       if (Math.abs(ratio - 3) > 0.3) offRatio.push(`${file.name} (${ratio.toFixed(2)}:1)`);
-      const upload = await compressImage(file);
-      const fd = new FormData();
-      fd.set("file", upload);
-      fd.set("productId", "home");
-      fd.set("folder", "carousel");
+      const fd = await buildImageUploadForm(file, "home", "carousel");
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
       if (res.ok) {
         const { url } = await res.json();

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { withVariantPaths } from "@/lib/image-variants";
 import { getCarouselSlides } from "@/lib/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CarouselSlide } from "@/lib/types";
@@ -46,7 +47,7 @@ export async function saveCarousel(input: {
         if (match) paths.push(match[1]);
       }
     }
-    if (paths.length) await supabase.storage.from("product-media").remove(paths);
+    if (paths.length) await supabase.storage.from("product-media").remove(withVariantPaths(paths));
     await supabase.from("carousel_slides").delete().in("id", input.deletedIds);
   }
 

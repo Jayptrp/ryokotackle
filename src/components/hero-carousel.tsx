@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
+import { VariantImage } from "@/components/variant-image";
 import type { CarouselSlide } from "@/lib/types";
 
 export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
@@ -21,6 +21,10 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
   const [animate, setAnimate] = useState(true);
   const [paused, setPaused] = useState(false);
   const [hidden, setHidden] = useState(false);
+  // Finger offset (px) while a horizontal swipe is in progress; null otherwise.
+  const [dragX, setDragX] = useState<number | null>(null);
+  // Swipe settles use a shorter drawer curve; arrows/dots/auto keep 700ms.
+  const [swipeSettle, setSwipeSettle] = useState(false);
 
   const realIndex = loop ? (((pos - 1) % n) + n) % n : pos;
 
@@ -43,23 +47,24 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
   }, []);
   useEffect(() => () => clearTimeout(lockTimer.current), []);
 
-  const next = useCallback(() => {
-    if (sliding.current) return;
-    lock();
-    setAnimate(true);
-    setPos((p) => p + 1);
-  }, [lock]);
-  const prev = useCallback(() => {
-    if (sliding.current) return;
-    lock();
-    setAnimate(true);
-    setPos((p) => p - 1);
-  }, [lock]);
+  const step = useCallback(
+    (delta: 1 | -1, swipe = false) => {
+      if (sliding.current) return;
+      lock();
+      setSwipeSettle(swipe);
+      setAnimate(true);
+      setPos((p) => p + delta);
+    },
+    [lock],
+  );
+  const next = useCallback(() => step(1), [step]);
+  const prev = useCallback(() => step(-1), [step]);
   const goTo = useCallback(
     (i: number) => {
       const target = loop ? i + 1 : i;
       if (sliding.current || target === pos) return;
       lock();
+      setSwipeSettle(false);
       setAnimate(true);
       setPos(target);
     },
@@ -115,6 +120,7 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
       if (!isHidden && loop) {
         clearTimeout(lockTimer.current);
         sliding.current = false;
+        setDragX(null);
         setAnimate(false);
         setPos((p) => ((((p - 1) % n) + n) % n) + 1);
       }
@@ -123,56 +129,128 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [loop, n]);
 
-  // Touch swipe: commit on release when the horizontal drag passes a threshold.
-  const touchStartX = useRef(0);
-  const touchDeltaX = useRef(0);
+  // Touch swipe: the track follows the finger 1:1 once the gesture locks
+  // horizontal (~8px); a vertical gesture is left to the browser (pan-y) so the
+  // page scrolls. On release, commit on distance or flick velocity, else snap
+  // back. Disabled with a single slide (no clones to slide onto).
+  const sectionRef = useRef<HTMLElement>(null);
+  const touch = useRef({
+    x: 0,
+    y: 0,
+    t: 0,
+    dx: 0,
+    dir: null as "h" | "v" | null,
+    active: false,
+  });
+  // A horizontal drag must not also count as a tap on a linked slide.
+  const suppressClick = useRef(false);
   const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchDeltaX.current = 0;
     setPaused(true);
+    suppressClick.current = false;
+    // Ignore touches mid-slide: grabbing the track then would cancel the
+    // transition (no transitionend → no clone snap) and let the next move run
+    // past the clones.
+    if (!loop || sliding.current) return;
+    const t = e.touches[0];
+    touch.current = {
+      x: t.clientX,
+      y: t.clientY,
+      t: performance.now(),
+      dx: 0,
+      dir: null,
+      active: true,
+    };
   };
   const onTouchMove = (e: React.TouchEvent) => {
-    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+    const g = touch.current;
+    if (!g.active) return;
+    const t = e.touches[0];
+    const dx = t.clientX - g.x;
+    const dy = t.clientY - g.y;
+    if (g.dir === null) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
+      g.dir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+    }
+    if (g.dir !== "h") return;
+    // Clamp to one slide so a long drag can't reveal past the clones.
+    const w = sectionRef.current?.offsetWidth ?? Infinity;
+    g.dx = Math.max(-w, Math.min(w, dx));
+    suppressClick.current = true;
+    setDragX(g.dx);
   };
   const onTouchEnd = () => {
-    if (Math.abs(touchDeltaX.current) > 40) {
-      if (touchDeltaX.current < 0) next();
-      else prev();
-    }
+    const g = touch.current;
+    const wasDrag = g.active && g.dir === "h";
+    g.active = false;
     setPaused(false);
+    if (!wasDrag) return;
+    setDragX(null);
+    const elapsed = Math.max(1, performance.now() - g.t);
+    if (Math.abs(g.dx) > 40 || Math.abs(g.dx) / elapsed > 0.11) {
+      step(g.dx < 0 ? 1 : -1, true);
+    } else if (g.dx !== 0) {
+      // Snap back to the current slide.
+      lock();
+      setSwipeSettle(true);
+      setAnimate(true);
+    }
+  };
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (!suppressClick.current) return;
+    suppressClick.current = false;
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   if (n === 0) return null;
 
   return (
     <section
-      className="group relative aspect-[3/1] w-full overflow-hidden rounded-none bg-primary-container shadow-md lg:rounded-2xl"
+      ref={sectionRef}
+      className="group relative aspect-[3/1] w-full touch-pan-y overflow-hidden rounded-none bg-primary-container shadow-md lg:rounded-2xl"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      onClickCapture={onClickCapture}
     >
       {/* Sliding track */}
       <div
         className={cn(
-          "flex h-full w-full ease-in-out",
-          animate && "transition-transform duration-700",
+          "flex h-full w-full",
+          dragX === null &&
+            animate &&
+            (swipeSettle
+              ? "transition-transform duration-400 ease-drawer motion-reduce:duration-200"
+              : "transition-transform duration-700 ease-in-out"),
         )}
-        style={{ transform: `translateX(-${pos * 100}%)` }}
+        style={{
+          transform:
+            dragX === null
+              ? `translateX(-${pos * 100}%)`
+              : `translateX(calc(-${pos * 100}% + ${dragX}px))`,
+        }}
         onTransitionEnd={handleTransitionEnd}
       >
         {extended.map((slide, i) => {
           // Image-only slides: the admin bakes any text/detail into the image
           // itself, so there's no title/subtitle/gradient overlay here.
+          // The first real slide is the LCP image: load it eagerly at high
+          // priority rather than preloading it, since a preload would fetch the
+          // desktop size on phones (see VariantImage).
+          const first = loop ? i === 1 : i === 0;
           const content = (
-            <Image
+            <VariantImage
               src={slide.imageUrl}
+              variant="banner"
+              mobileVariant="banner-sm"
               alt={slide.title ?? ""}
               fill
-              priority={loop ? i === 1 : i === 0}
+              loading={first ? "eager" : undefined}
+              fetchPriority={first ? "high" : undefined}
               className="object-cover transition-transform duration-300 group-hover:scale-102"
-              unoptimized
             />
           );
           // overflow-hidden clips each image to its own slide, so a hovered
