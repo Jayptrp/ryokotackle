@@ -16,6 +16,10 @@ function youTubeEmbed(url: string): string | null {
 
 type Filter = "all" | "image" | "video";
 
+// Lightbox media entrance (entry only; closing is instant). Reduced motion: fade only.
+const entryClassName =
+  "transition-[opacity,scale] duration-250 ease-out starting:opacity-0 motion-safe:starting:scale-96";
+
 export function ProductGallery({
   media,
   alt,
@@ -26,6 +30,10 @@ export function ProductGallery({
   const [filter, setFilter] = useState<Filter>("all");
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
+  // True until the first prev/next inside the lightbox: only the media shown on
+  // open gets the entrance, so switching image <-> video (a fresh wrapper) stays
+  // an instant cut.
+  const [lightboxEntry, setLightboxEntry] = useState(false);
 
   const hasImage = media.some((m) => m.type === "image");
   const hasVideo = media.some((m) => m.type === "video");
@@ -37,7 +45,10 @@ export function ProductGallery({
 
   const idx = Math.min(active, Math.max(0, list.length - 1));
   const current = list[idx];
-  const go = (i: number) => setActive((i + list.length) % list.length);
+  const go = (i: number) => {
+    setLightboxEntry(false);
+    setActive((i + list.length) % list.length);
+  };
   const pick = (f: Filter) => {
     setFilter(f);
     setActive(0);
@@ -110,7 +121,10 @@ export function ProductGallery({
         ) : (
           <button
             type="button"
-            onClick={() => setLightbox(true)}
+            onClick={() => {
+              setLightboxEntry(true);
+              setLightbox(true);
+            }}
             className="block h-full w-full cursor-zoom-in"
             aria-label="ดูรูปขนาดใหญ่"
           >
@@ -190,7 +204,7 @@ export function ProductGallery({
       {/* Lightbox */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 md:p-8"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 transition-opacity duration-200 ease-out starting:opacity-0 md:p-8"
           onClick={() => setLightbox(false)}
           role="dialog"
           aria-modal="true"
@@ -201,7 +215,10 @@ export function ProductGallery({
           >
             {current.type === "video" && youTubeEmbed(current.url) ? (
               <div
-                className="pointer-events-auto aspect-video w-full max-w-4xl"
+                className={cn(
+                  "pointer-events-auto aspect-video w-full max-w-4xl",
+                  lightboxEntry && entryClassName,
+                )}
                 onClick={(e) => e.stopPropagation()}
               >
                 <iframe
@@ -214,7 +231,10 @@ export function ProductGallery({
               </div>
             ) : (
               <div
-                className="pointer-events-auto relative"
+                className={cn(
+                  "pointer-events-auto relative",
+                  lightboxEntry && entryClassName,
+                )}
                 onClick={(e) => e.stopPropagation()}
               >
                 <Image

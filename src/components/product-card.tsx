@@ -17,7 +17,10 @@ export function ProductCard({
   return (
     <Link
       href={`/products/${product.slug}`}
-      className={cn("group block cursor-pointer", className)}
+      className={cn(
+        "group block cursor-pointer transition-[scale,opacity] duration-150 ease-out motion-safe:active:scale-[0.98] motion-reduce:active:opacity-90",
+        className,
+      )}
     >
       <div className="mb-stack-md aspect-square overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low transition-all duration-500">
         {product.primaryImage ? (
