@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { saveFeatured } from "@/app/admin/home/actions";
 import { Icon } from "@/components/icon";
-import { compressImage } from "@/lib/compress-image";
+import { buildImageUploadForm } from "@/lib/compress-image";
 
 export interface FeaturedProduct {
   id: string;
@@ -207,11 +207,7 @@ function FeaturedCategoryCard({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const upload = await compressImage(file);
-    const fd = new FormData();
-    fd.set("file", upload);
-    fd.set("productId", "home");
-    fd.set("folder", `featured-banner/${row.slug}`);
+    const fd = await buildImageUploadForm(file, "home", `featured-banner/${row.slug}`);
     const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
     if (res.ok) {
       const { url } = await res.json();

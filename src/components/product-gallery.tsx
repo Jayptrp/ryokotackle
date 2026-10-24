@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
+import { VariantImage } from "@/components/variant-image";
 import type { ProductMedia } from "@/lib/types";
 
 function youTubeEmbed(url: string): string | null {
@@ -172,13 +173,13 @@ export function ProductGallery({
                   <Icon name="play_circle" className="text-2xl text-primary" />
                 </div>
               ) : (
-                <Image
+                <VariantImage
                   src={m.url}
+                  variant="thumb"
                   alt={m.alt ?? `${alt} ${i + 1}`}
                   width={64}
                   height={64}
                   className="h-full w-full object-cover"
-                  unoptimized
                 />
               )}
             </button>

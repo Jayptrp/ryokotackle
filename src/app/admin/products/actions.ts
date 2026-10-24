@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { withVariantPaths } from "@/lib/image-variants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slug";
 
@@ -305,7 +306,7 @@ export async function reorderMedia(productId: string, orderedIds: string[]) {
   );
 }
 
-/** Delete a media item and its Storage object. */
+/** Delete a media item and its Storage objects (original + size variants). */
 export async function deleteMedia(mediaId: string, productId: string, storageUrl: string) {
   const supabase = await createAdminClient();
 
@@ -313,7 +314,7 @@ export async function deleteMedia(mediaId: string, productId: string, storageUrl
   const url = new URL(storageUrl);
   const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/product-media\/(.+)$/);
   if (pathMatch) {
-    await supabase.storage.from("product-media").remove([pathMatch[1]]);
+    await supabase.storage.from("product-media").remove(withVariantPaths([pathMatch[1]]));
   }
 
   await supabase.from("product_media").delete().eq("id", mediaId);
@@ -461,7 +462,7 @@ export async function saveProductAll(formData: FormData) {
     try {
       const url = new URL(item.url);
       const m = url.pathname.match(/\/storage\/v1\/object\/public\/product-media\/(.+)$/);
-      if (m) await supabase.storage.from("product-media").remove([m[1]]);
+      if (m) await supabase.storage.from("product-media").remove(withVariantPaths([m[1]]));
     } catch { /* non-storage URL, skip */ }
     await supabase.from("product_media").delete().eq("id", item.id);
   }
@@ -525,8 +526,9 @@ export async function deleteProduct(id: string) {
 
   // The FK cascade removes product_media/channels/carousel ROWS, but not the
   // Storage objects — so gather every product-media path (gallery images plus
-  // inline images embedded in the description) and remove the files first,
-  // otherwise deleting a product silently orphans its images.
+  // inline images embedded in the description) and remove the files, with
+  // their size variants, first; otherwise deleting a product silently orphans
+  // its images.
   const paths = new Set<string>();
   const collect = (s?: string | null) => {
     if (!s) return;
@@ -535,7 +537,7 @@ export async function deleteProduct(id: string) {
   };
   for (const item of (data?.media ?? []) as { url: string | null }[]) collect(item.url);
   collect(data?.description);
-  if (paths.size) await supabase.storage.from("product-media").remove([...paths]);
+  if (paths.size) await supabase.storage.from("product-media").remove(withVariantPaths([...paths]));
 
   await supabase.from("products").delete().eq("id", id);
 

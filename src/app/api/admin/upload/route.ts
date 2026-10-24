@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { variantPath, variantsForPath } from "@/lib/image-variants";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm"];
 const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_VARIANT_SIZE = 5 * 1024 * 1024; // variants are ≤1600px JPEGs, far below this
 
 export async function POST(request: NextRequest) {
   const supabase = await createAdminClient();
@@ -37,6 +39,21 @@ export async function POST(request: NextRequest) {
     .upload(path, file, { upsert: false, contentType: file.type });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Size variants made in the admin's browser (see image-variants.ts). Only the
+  // ones this folder uses are stored. Best effort: if one is missing, public
+  // pages fall back to the original.
+  await Promise.all(
+    variantsForPath(path).map(async (name) => {
+      const variant = formData.get(`variant:${name}`);
+      if (!(variant instanceof File) || variant.type !== "image/jpeg" || variant.size > MAX_VARIANT_SIZE)
+        return;
+      const { error: variantError } = await supabase.storage
+        .from("product-media")
+        .upload(variantPath(path, name), variant, { upsert: false, contentType: "image/jpeg" });
+      if (variantError) console.error(`Variant "${name}" upload failed for ${path}: ${variantError.message}`);
+    }),
+  );
 
   const { data: { publicUrl } } = supabase.storage
     .from("product-media")

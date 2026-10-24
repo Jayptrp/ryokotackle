@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { Icon } from "@/components/icon";
-import Image from "next/image";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { ProductCard } from "@/components/product-card";
+import { VariantImage } from "@/components/variant-image";
 import { T, LocalizedName } from "@/components/i18n/localized";
 import {
   getCarouselSlides,
@@ -64,13 +64,13 @@ export default async function HomePage() {
               >
                 {/* Background image (uploaded → product → auto-pick) or gradient fallback */}
                 {category.backgroundImage ? (
-                  <Image
+                  <VariantImage
                     src={category.backgroundImage}
+                    variant="card"
                     alt=""
                     fill
                     sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    unoptimized
                   />
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary" />
@@ -111,13 +111,14 @@ export default async function HomePage() {
                       href={`/category/${group.slug}`}
                       className="relative mb-stack-md block aspect-[3/1] overflow-hidden rounded-xl border border-outline-variant transition-all hover:border-secondary hover:shadow-md"
                     >
-                      <Image
+                      <VariantImage
                         src={group.bannerUrl}
+                        variant="banner"
+                        mobileVariant="banner-sm"
                         alt={group.nameTh ?? group.name}
                         fill
                         sizes="(min-width: 1024px) 1200px, 100vw"
                         className="object-cover"
-                        unoptimized
                       />
                     </Link>
                   )}

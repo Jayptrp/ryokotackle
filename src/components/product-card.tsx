@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
 import { LocalizedName } from "@/components/i18n/localized";
+import { VariantImage } from "@/components/variant-image";
 import type { ProductListItem } from "@/lib/types";
 
 export function ProductCard({
@@ -21,13 +21,13 @@ export function ProductCard({
     >
       <div className="mb-stack-md aspect-square overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low transition-all duration-500">
         {product.primaryImage ? (
-          <Image
+          <VariantImage
             src={product.primaryImage}
+            variant="card"
             alt={product.nameTh ?? product.name}
             width={600}
             height={600}
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-            unoptimized
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-container to-surface-container-high">

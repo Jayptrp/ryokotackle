@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/icon";
+import { VariantImage } from "@/components/variant-image";
 import type { CarouselSlide } from "@/lib/types";
 
 export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
@@ -165,14 +165,20 @@ export function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
         {extended.map((slide, i) => {
           // Image-only slides: the admin bakes any text/detail into the image
           // itself, so there's no title/subtitle/gradient overlay here.
+          // The first real slide is the LCP image: load it eagerly at high
+          // priority rather than preloading it, since a preload would fetch the
+          // desktop size on phones (see VariantImage).
+          const first = loop ? i === 1 : i === 0;
           const content = (
-            <Image
+            <VariantImage
               src={slide.imageUrl}
+              variant="banner"
+              mobileVariant="banner-sm"
               alt={slide.title ?? ""}
               fill
-              priority={loop ? i === 1 : i === 0}
+              loading={first ? "eager" : undefined}
+              fetchPriority={first ? "high" : undefined}
               className="object-cover transition-transform duration-300 group-hover:scale-102"
-              unoptimized
             />
           );
           // overflow-hidden clips each image to its own slide, so a hovered
