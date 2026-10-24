@@ -281,7 +281,7 @@ export default async function ProductDetailPage({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: meta.color }}
-                      className="group flex items-center gap-2 rounded-lg px-5 py-3 font-label-caps text-label-caps text-white shadow-sm transition-all hover:opacity-90"
+                      className="group flex items-center gap-2 rounded-lg px-5 py-3 font-label-caps text-label-caps text-white shadow-sm transition-all duration-160 ease-out hover:opacity-90 motion-safe:active:scale-[0.97] motion-reduce:active:opacity-85"
                     >
                       <BrandIcon
                         name={ch.channel}
@@ -301,7 +301,7 @@ export default async function ProductDetailPage({
               </p>
               <Link
                 href="/contact"
-                className="inline-flex w-fit items-center gap-2 rounded-lg bg-primary px-6 py-3 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container"
+                className="inline-flex w-fit items-center gap-2 rounded-lg bg-primary px-6 py-3 font-label-caps text-label-caps text-on-primary transition-[color,background-color,scale,opacity] duration-160 ease-out hover:bg-primary-container motion-safe:active:scale-[0.97] motion-reduce:active:opacity-85"
               >
                 <Icon name="mail" className="text-lg" />
                 <T k="detail.inquireOrder" />

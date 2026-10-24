@@ -52,7 +52,7 @@ export function LanguageSwitcher() {
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 top-full z-50 mt-2 min-w-44 overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 min-w-44 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-lg transition-[opacity,scale] duration-150 ease-out starting:opacity-0 motion-safe:starting:scale-96"
         >
           {LOCALES.map((l) => {
             const active = l === locale;
